@@ -47,6 +47,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _addQuestion(Map<String,dynamic> category) async {
+    final q=TextEditingController(); final opts=List.generate(4,(_)=>TextEditingController());
+    final ok=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(
+      title:Text('Add to ${category['name']}'),
+      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        TextField(controller:q,maxLength:300,decoration:const InputDecoration(labelText:'Your question')),
+        const Text('Add 2–4 choices. Both partners will see this question.'),
+        for(int i=0;i<4;i++)TextField(controller:opts[i],decoration:InputDecoration(labelText:'Option ${i+1}')),
+      ])),
+      actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Add question'))],
+    ));
+    if(ok==true){
+      final choices=opts.map((e)=>e.text.trim()).where((e)=>e.isNotEmpty).toList();
+      if(q.text.trim().length<3||choices.length<2){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Add a question and at least 2 options.')));return;}
+      try{await _categories.addQuestion(roomId:widget.roomId,categoryId:category['id'] as int,text:q.text,options:choices);_reload();if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Question added for both of you.')));}
+      catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Could not add that question.')));}
+    }
+    q.dispose();for(final x in opts)x.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,8 +121,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: Text('${category['name']} question library'),
                   subtitle: Text('${(category['questions'] as List?)?.length ?? 0} available'),
                   children: [
+                    ListTile(leading:const Icon(Icons.add_circle_outline),title:const Text('Add your own question'),subtitle:const Text('Both partners can add questions'),onTap:()=>_addQuestion(category)),
                     for (final q in (category['questions'] as List?) ?? const [])
-                      ListTile(leading: const Icon(Icons.question_mark, size: 18), title: Text(q.toString())),
+                      ListTile(leading: Icon((q as Map)['custom']==true?Icons.favorite_outline:Icons.question_mark,size:18),title:Text(q['text'].toString()),subtitle:Text(((q['options'] as List?)??const[]).join(' • '))),
                   ],
                 ),
               if (categories.isEmpty)
