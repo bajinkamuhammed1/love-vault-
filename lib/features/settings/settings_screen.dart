@@ -89,17 +89,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           final categories = snapshot.data ?? const [];
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
             children: [
-              Text('Question Categories',
-                  style: Theme.of(context).textTheme.headlineSmall),
+              Text('Our Questions', style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 6),
               const Text(
-                'Choose which categories can appear when either partner spins. These settings are shared by your private room.',
+                'Choose what appears in Play. Both of you share these settings, and both partners can add private questions.',
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               for (final category in categories)
-                Card(
+                Padding(padding: const EdgeInsets.only(bottom: 10), child: Card(
                   child: SwitchListTile.adaptive(
                     secondary: Text(
                       category['emoji']?.toString() ?? '💬',
@@ -114,11 +113,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ? null
                         : (value) => _toggle(category, value),
                   ),
-                ),
+                )),
+              const SizedBox(height: 20),
+              Text('Question Library', style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 8),
               for (final category in categories)
                 ExpansionTile(
                   leading: Text(category['emoji']?.toString() ?? '💬', style: const TextStyle(fontSize: 22)),
-                  title: Text('${category['name']} question library'),
+                  title: Text('${category['emoji'] ?? '💬'}  ${category['name']}'),
                   subtitle: Text('${(category['questions'] as List?)?.length ?? 0} available'),
                   children: [
                     ListTile(leading:const Icon(Icons.add_circle_outline),title:const Text('Add your own question'),subtitle:const Text('Both partners can add questions'),onTap:()=>_addQuestion(category)),
