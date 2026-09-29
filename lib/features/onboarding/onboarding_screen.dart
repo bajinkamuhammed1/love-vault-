@@ -126,7 +126,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       textCapitalization: TextCapitalization.characters,
                       decoration: const InputDecoration(
                         labelText: 'Room code',
-                        hintText: 'AB12-CD34',
+                        hintText: 'AB12CD34 (dash optional)',
                         border: OutlineInputBorder(),
                       ),
                     ),
