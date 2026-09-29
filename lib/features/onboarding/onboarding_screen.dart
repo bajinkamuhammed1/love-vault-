@@ -108,8 +108,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   const SizedBox(height: 12),
                   SegmentedButton<bool>(
                     segments: const [
-                      ButtonSegment(value: false, label: Text('Create Room'), icon: Icon(Icons.add)),
-                      ButtonSegment(value: true, label: Text('Join Room'), icon: Icon(Icons.login)),
+                      ButtonSegment(value: false, label: Text('Create'), icon: Icon(Icons.add)),
+                      ButtonSegment(value: true, label: Text('Join'), icon: Icon(Icons.login)),
                     ],
                     selected: {_joining},
                     onSelectionChanged: _busy
@@ -148,7 +148,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : Icon(_joining ? Icons.login : Icons.favorite_outline),
-                    label: Text(_joining ? 'Join Private Room' : 'Create Private Room'),
+                    label: Text(_joining ? 'Join Room' : 'Create Room'),
                   ),
                 ],
               ),
