@@ -9,7 +9,11 @@ class MemoriesScreen extends StatefulWidget{
 class _MemoriesScreenState extends State<MemoriesScreen>{
   late final MemoryService _service; late Future<List<Map<String,dynamic>>> _future;
   @override void initState(){super.initState();_service=MemoryService(Supabase.instance.client);_reload();}
-  void _reload() {\n    setState(() {\n      _future = _service.list(widget.roomId);\n    });\n  }
+  void _reload() {
+    setState(() {
+      _future = _service.list(widget.roomId);
+    });
+  }
 
   Future<void> _edit([Map<String,dynamic>? memory]) async{
     final ok=await showModalBottomSheet<bool>(context:context,isScrollControlled:true,builder:(_)=>_MemoryEditor(service:_service,roomId:widget.roomId,memory:memory));
