@@ -139,7 +139,7 @@ class _PlayScreenState extends State<PlayScreen> {
     const SizedBox(height:28),
     FilledButton.icon(onPressed:_busy||_categories.isEmpty?null:_spinAndStart,icon:const Icon(Icons.casino_outlined),label:Text(_busy?'Choosing your game…':'Spin & Play')),
     if(_categories.isEmpty&&!_busy)const Padding(padding:EdgeInsets.all(20),child:Text('Enable at least one category in Settings to play.',textAlign:TextAlign.center)),
-    if(_error!=null)Padding(padding:const EdgeInsets.only(top:14),child:Text(_error!,textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.error)),
+    if(_error!=null)Padding(padding:const EdgeInsets.only(top:14),child:Text(_error!,textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.error))),
   ]);
 }
 
