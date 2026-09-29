@@ -8,6 +8,10 @@ class PlayService {
     final r=await _client.rpc('list_play_categories',params:{'p_room_id':roomId});
     return (r as List).map((e)=>Map<String,dynamic>.from(e as Map)).toList();
   }
+  Future<int?> nextCategory(String roomId) async {
+    final r=await _client.rpc('next_play_category',params:{'p_room_id':roomId});
+    return r==null?null:(r as num).toInt();
+  }
   Future<String> startCategory(String roomId,int categoryId) async =>
       (await _client.rpc('start_category_game',params:{'p_room_id':roomId,'p_category_id':categoryId})).toString();
   Future<String?> currentGame(String roomId) async {
