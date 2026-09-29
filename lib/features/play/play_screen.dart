@@ -2,42 +2,137 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/play_service.dart';
-class PlayScreen extends StatefulWidget{const PlayScreen({super.key,required this.roomId});final String roomId;@override State<PlayScreen> createState()=>_PlayScreenState();}
-class _PlayScreenState extends State<PlayScreen>{
- late final PlayService _play;Map<String,dynamic>? _state;bool _busy=false;int _wheelTurns=0;String? _error;Timer? _poller;String? _choice,_guess;
- @override void initState(){super.initState();_play=PlayService(Supabase.instance.client);_discover();_poller=Timer.periodic(const Duration(seconds:2),(_)=>_discover());}
- Future<void> _discover()async{try{final id=await _play.currentSession(widget.roomId);if(id==null)return;final s=await _play.state(id);if(mounted)setState(()=>_state=s);}catch(_){}}
- @override void dispose(){_poller?.cancel();super.dispose();}
- Future<void> _spin()async{setState((){_busy=true;_error=null;_wheelTurns+=3;_choice=null;_guess=null;});try{await Future.delayed(const Duration(milliseconds:1100));final x=await _play.start(widget.roomId,guessEnabled:true);final s=await _play.state(x['session_id'].toString());if(mounted)setState(()=>_state=s);}catch(e){if(mounted)setState(()=>_error=_friendly(e.toString()));}finally{if(mounted)setState(()=>_busy=false);}}
- Future<void> _answer()async{final s=_state;if(s==null||_choice==null)return;await _act(()async{await _play.submitAnswer(s['session_id'].toString(),_choice!);await _discover();});}
- Future<void> _submitGuess()async{final s=_state;if(s==null||_guess==null)return;await _act(()async{await _play.submitGuess(s['session_id'].toString(),_guess!);await _discover();});}
- Future<void> _act(Future<void> Function() f)async{setState(()=>_busy=true);try{await f();}catch(e){if(mounted)setState(()=>_error=_friendly(e.toString()));}finally{if(mounted)setState(()=>_busy=false);}}
- String _friendly(String x){if(x.contains('partner has not joined'))return 'Your partner needs to join first.';if(x.contains('No enabled'))return 'Turn on at least one category in Settings.';return 'Could not continue. Please try again.';}
- Widget _options(List opts,String? selected,ValueChanged<String> onPick)=>Column(children:[for(final o in opts)Padding(padding:const EdgeInsets.only(bottom:10),child:InkWell(borderRadius:BorderRadius.circular(20),onTap:_busy?null:()=>onPick(o.toString()),child:Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:selected==o.toString()?const Color(0xFFFFEDF1):Colors.white,border:Border.all(color:selected==o.toString()?const Color(0xFFE9365A):const Color(0xFFE9E4E5)),borderRadius:BorderRadius.circular(20)),child:Row(children:[Icon(selected==o.toString()?Icons.radio_button_checked:Icons.radio_button_off,color:selected==o.toString()?const Color(0xFFE9365A):const Color(0xFF8A8587)),const SizedBox(width:12),Expanded(child:Text(o.toString()))]))))]);
- @override Widget build(BuildContext context){final s=_state;if(s==null){return Center(child:SingleChildScrollView(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
-  TweenAnimationBuilder<double>(duration:const Duration(milliseconds:1100),tween:Tween(begin:0,end:_wheelTurns.toDouble()),builder:(c,v,ch)=>Transform.rotate(angle:v*6.28318,child:ch),child:const CircleAvatar(radius:50,child:Icon(Icons.casino_outlined,size:58))),const SizedBox(height:18),
-  Text('Spin for your next question',style:Theme.of(context).textTheme.headlineSmall),const SizedBox(height:8),const Text('You both get the same question and choices.',textAlign:TextAlign.center),const SizedBox(height:18),
-  if(_error!=null)Text(_error!,style:TextStyle(color:Theme.of(context).colorScheme.error)),FilledButton.icon(onPressed:_busy?null:_spin,icon:const Icon(Icons.casino),label:Text(_busy?'Spinning…':'Spin'))
- ])));}
- final status=s['status']?.toString();final answered=s['my_answer']!=null;final guessed=s['my_guess']!=null;final revealed=status=='revealed'||status=='complete';final opts=(s['options'] as List?)??const[];final answers=(s['answers'] as List?)??const[];final guesses=(s['guesses'] as List?)??const[];
- return ListView(padding:const EdgeInsets.fromLTRB(24,28,24,110),children:[
-  Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text('PLAY TOGETHER  •  Question ${s['question_number']??1} of 6',style:Theme.of(context).textTheme.titleMedium),Text('${s['answer_count']??0}/2 answered')]),const SizedBox(height:12),
-  Center(child:Text('${s['category_emoji']??''} ${s['category_name']??''}',style:Theme.of(context).textTheme.titleLarge)),const SizedBox(height:12),
-  Container(padding:const EdgeInsets.all(26),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFFFFF0F3),Color(0xFFFFF8EE)]),borderRadius:BorderRadius.circular(28)),child:Text(s['question_text']?.toString()??'',style:Theme.of(context).textTheme.headlineMedium,textAlign:TextAlign.center)),const SizedBox(height:14),
-  if(!answered)...[_options(opts,_choice,(v)=>setState(()=>_choice=v)),FilledButton.icon(onPressed:_choice==null||_busy?null:_answer,icon:const Icon(Icons.arrow_forward),label:const Text('Next'))]
-  else if(status=='answering')...[
-   const Icon(Icons.check_circle_outline,size:44),const SizedBox(height:8),Text('Answer saved. Waiting for your partner… (${s['answer_count']}/2)',textAlign:TextAlign.center)]
-  else if(status=='guessing'&&!guessed)...[
-   Text('Guess your partner’s answer',style:Theme.of(context).textTheme.titleLarge,textAlign:TextAlign.center),const SizedBox(height:6),const Text('Pick the choice you think your partner selected.',textAlign:TextAlign.center),const SizedBox(height:12),
-   _options(opts,_guess,(v)=>setState(()=>_guess=v)),FilledButton.icon(onPressed:_guess==null||_busy?null:_submitGuess,icon:const Icon(Icons.psychology_alt_outlined),label:const Text('Next'))]
-  else if(status=='guessing')...[
-   const Icon(Icons.hourglass_top,size:44),const SizedBox(height:8),Text('Guess saved. Waiting for your partner… (${s['guess_count']}/2)',textAlign:TextAlign.center)]
-  else if(revealed)...[
-   Text('Reveal',style:Theme.of(context).textTheme.titleLarge),const SizedBox(height:8),
-   for(final a in answers)Card(child:ListTile(leading:const Icon(Icons.favorite_outline),title:Text((a as Map)['display_name']?.toString()??'Player'),subtitle:Text(a['answer']?.toString()??''))),
-   for(final g in guesses)Card(child:ListTile(leading:const Icon(Icons.psychology_alt_outlined),title:Text('${(g as Map)['guesser_name']??'Player'} guessed'),subtitle:Text(g['guess']?.toString()??''))),
-   const SizedBox(height:12),FilledButton.icon(onPressed:_busy?null:_spin,icon:const Icon(Icons.arrow_forward),label:Text((s['question_number']??1)==6?'Start New Round':'Next Question'))
-  ],
-  if(_error!=null)Padding(padding:const EdgeInsets.only(top:12),child:Text(_error!,textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.error)))
- ]);}
+
+class PlayScreen extends StatefulWidget {
+  const PlayScreen({super.key,required this.roomId});
+  final String roomId;
+  @override State<PlayScreen> createState()=>_PlayScreenState();
+}
+
+class _PlayScreenState extends State<PlayScreen> {
+  late final PlayService _play;
+  Map<String,dynamic>? _game;
+  List<Map<String,dynamic>> _categories=[];
+  int _index=0;
+  bool _busy=false;
+  String? _error;
+  Timer? _poller;
+
+  @override void initState(){super.initState();_play=PlayService(Supabase.instance.client);_load();_poller=Timer.periodic(const Duration(seconds:2),(_)=>_refresh());}
+  @override void dispose(){_poller?.cancel();super.dispose();}
+
+  Future<void> _load() async {
+    try {
+      final cats=await _play.categories(widget.roomId);
+      final id=await _play.currentGame(widget.roomId);
+      Map<String,dynamic>? game;
+      if(id!=null) game=await _play.gameState(id);
+      if(mounted)setState((){_categories=cats;_game=game;_index=_firstOpen(game);});
+    }catch(e){if(mounted)setState(()=>_error='Could not load Play.');}
+  }
+  Future<void> _refresh() async {
+    final g=_game;if(g==null)return;
+    try{final n=await _play.gameState(g['game_id'].toString());if(mounted)setState((){_game=n;_index=_firstOpen(n,preferred:_index);});}catch(_){}
+  }
+  int _firstOpen(Map<String,dynamic>? g,{int preferred=0}){
+    if(g==null)return 0;final qs=(g['questions'] as List?)??[];
+    if(qs.isEmpty)return 0;final status=g['status'];
+    if(status=='answering'){for(var i=0;i<qs.length;i++){if((qs[i] as Map)['my_answer']==null)return i;}}
+    if(status=='guessing'){for(var i=0;i<qs.length;i++){if((qs[i] as Map)['my_guess']==null)return i;}}
+    return preferred.clamp(0,qs.length-1);
+  }
+  Future<void> _start(Map<String,dynamic> cat) async {
+    setState((){_busy=true;_error=null;});
+    try{final id=await _play.startCategory(widget.roomId,(cat['id'] as num).toInt());final g=await _play.gameState(id);if(mounted)setState((){_game=g;_index=0;});}
+    catch(e){if(mounted)setState(()=>_error=e.toString().contains('partner')?'Your partner needs to join first.':'Could not start this category.');}
+    finally{if(mounted)setState(()=>_busy=false);}
+  }
+  Future<void> _pick(String value) async {
+    final g=_game;if(g==null)return;final qs=(g['questions'] as List);final q=Map<String,dynamic>.from(qs[_index] as Map);
+    setState(()=>_busy=true);
+    try{
+      if(g['status']=='answering')await _play.saveAnswer(g['game_id'].toString(),(q['question_id'] as num).toInt(),value);
+      else if(g['status']=='guessing')await _play.saveGuess(g['game_id'].toString(),(q['question_id'] as num).toInt(),value);
+      final n=await _play.gameState(g['game_id'].toString());
+      if(mounted)setState((){_game=n;_index=_firstOpen(n,preferred:(_index+1).clamp(0,qs.length-1));});
+    }catch(_){if(mounted)setState(()=>_error='Could not save that choice.');}
+    finally{if(mounted)setState(()=>_busy=false);}
+  }
+  Future<void> _quit() async {
+    final g=_game;if(g==null)return;
+    await _play.quit(g['game_id'].toString());
+    if(mounted)setState((){_game=null;_index=0;});
+  }
+
+  @override Widget build(BuildContext context){
+    final g=_game;
+    if(g==null)return _categoryPicker(context);
+    final qs=(g['questions'] as List?)??[];
+    if(qs.isEmpty)return const Center(child:Text('No questions available.'));
+    _index=_index.clamp(0,qs.length-1);
+    final q=Map<String,dynamic>.from(qs[_index] as Map);
+    final status=g['status']?.toString()??'answering';
+    final cat=Map<String,dynamic>.from((g['category'] as Map?)??{});
+    final options=(q['options'] as List?)??const[];
+    final selected=status=='answering'?q['my_answer']?.toString():q['my_guess']?.toString();
+
+    return ListView(padding:const EdgeInsets.fromLTRB(22,20,22,110),children:[
+      Row(children:[
+        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text('${cat['emoji']??''} ${cat['name']??'Play'}',style:Theme.of(context).textTheme.headlineSmall),
+          Text(status=='answering'?'Answer your questions':'Guess your partner’s answers',style:Theme.of(context).textTheme.bodyMedium),
+        ])),
+        TextButton.icon(onPressed:_busy?null:_quit,icon:const Icon(Icons.close,size:17),label:const Text('Leave')),
+      ]),
+      const SizedBox(height:16),
+      LinearProgressIndicator(value:(_index+1)/qs.length,borderRadius:BorderRadius.circular(10)),
+      const SizedBox(height:8),
+      Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+        Text('Question ${_index+1} of ${qs.length}'),
+        Text(status=='answering'?'${g['my_answer_count']}/${qs.length} answered':'${g['my_guess_count']}/${qs.length} guessed'),
+      ]),
+      const SizedBox(height:20),
+      Container(padding:const EdgeInsets.all(26),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFFFFF0F3),Color(0xFFFFF8EE)]),borderRadius:BorderRadius.circular(28)),child:Text(q['text']?.toString()??'',style:Theme.of(context).textTheme.headlineSmall,textAlign:TextAlign.center)),
+      const SizedBox(height:18),
+      if(status=='answering'||status=='guessing')
+        for(final o in options)Padding(padding:const EdgeInsets.only(bottom:10),child:InkWell(
+          onTap:_busy?null:()=>_pick(o.toString()),borderRadius:BorderRadius.circular(20),
+          child:Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:selected==o.toString()?const Color(0xFFFFEDF1):Colors.white,border:Border.all(color:selected==o.toString()?const Color(0xFFE9365A):const Color(0xFFE9E4E5)),borderRadius:BorderRadius.circular(20)),child:Row(children:[Icon(selected==o.toString()?Icons.radio_button_checked:Icons.radio_button_off,color:selected==o.toString()?const Color(0xFFE9365A):const Color(0xFF8A8587)),const SizedBox(width:12),Expanded(child:Text(o.toString()))])),
+        )),
+      if(status=='answering'&&(g['my_answer_count'] as num).toInt()==qs.length&&(g['partner_answer_count'] as num).toInt()<qs.length)
+        const _WaitCard(text:'Your answers are complete. Your partner is still answering.'),
+      if(status=='guessing'&&(g['my_guess_count'] as num).toInt()==qs.length&&(g['partner_guess_count'] as num).toInt()<qs.length)
+        const _WaitCard(text:'Your guesses are complete. Waiting for your partner.'),
+      if(status=='revealed')...[
+        Builder(builder:(context){final guess=q['my_guess']?.toString();final answer=q['partner_answer']?.toString();final correct=guess==answer;return Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(color:correct?const Color(0xFFF1FAF3):const Color(0xFFFFF1F4),borderRadius:BorderRadius.circular(24)),child:Column(children:[Icon(correct?Icons.check_circle:Icons.cancel_outlined,size:44,color:correct?Colors.green:const Color(0xFFE9365A)),const SizedBox(height:8),Text(correct?'Correct':'Not quite',style:Theme.of(context).textTheme.titleLarge),const SizedBox(height:5),Text(correct?'Your partner chose “$answer”.':'Your partner chose “$answer” instead.',textAlign:TextAlign.center)]));}),
+      ],
+      if(qs.length>1)Padding(padding:const EdgeInsets.only(top:14),child:Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+        IconButton.filledTonal(onPressed:_index>0?()=>setState(()=>_index--):null,icon:const Icon(Icons.arrow_back)),
+        if(status=='revealed')Text('${_index+1} / ${qs.length}'),
+        IconButton.filledTonal(onPressed:_index<qs.length-1?()=>setState(()=>_index++):null,icon:const Icon(Icons.arrow_forward)),
+      ])),
+      if(_error!=null)Padding(padding:const EdgeInsets.only(top:12),child:Text(_error!,textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.error))),
+    ]);
+  }
+
+  Widget _categoryPicker(BuildContext context)=>ListView(padding:const EdgeInsets.fromLTRB(22,28,22,110),children:[
+    Text('Play together',style:Theme.of(context).textTheme.headlineMedium),
+    const SizedBox(height:6),const Text('Choose a category. Answer its questions first, then guess your partner’s answers.'),
+    const SizedBox(height:22),
+    for(final c in _categories)Card(child:ListTile(
+      leading:Text(c['emoji']?.toString()??'💕',style:const TextStyle(fontSize:27)),
+      title:Text(c['name']?.toString()??'Category'),
+      subtitle:Text('${c['question_count']??0} questions'),
+      trailing:const Icon(Icons.arrow_forward_ios,size:16),
+      onTap:_busy?null:()=>_start(c),
+    )),
+    if(_categories.isEmpty&&!_busy)const Padding(padding:EdgeInsets.all(20),child:Text('No categories are enabled. You can enable them in Settings.',textAlign:TextAlign.center)),
+    if(_busy)const Center(child:Padding(padding:EdgeInsets.all(20),child:CircularProgressIndicator())),
+    if(_error!=null)Text(_error!,textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.error)),
+  ]);
+}
+
+class _WaitCard extends StatelessWidget{
+  const _WaitCard({required this.text});final String text;
+  @override Widget build(BuildContext context)=>Container(margin:const EdgeInsets.only(top:12),padding:const EdgeInsets.all(20),decoration:BoxDecoration(color:const Color(0xFFFFF1F4),borderRadius:BorderRadius.circular(22)),child:Row(children:[const Icon(Icons.favorite_outline,color:Color(0xFFE9365A)),const SizedBox(width:12),Expanded(child:Text(text))]));
 }
