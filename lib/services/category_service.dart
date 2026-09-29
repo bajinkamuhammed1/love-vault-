@@ -16,6 +16,7 @@ class CategoryService {
         .eq('active', true)
         .order('sort_order');
 
+    final questions = await _client.from('questions').select('category_id, text').eq('active', true);
     final enabledById = <String, bool>{
       for (final row in settings)
         row['category_id'].toString(): row['enabled'] == true,
@@ -26,6 +27,7 @@ class CategoryService {
         {
           ...category,
           'enabled': enabledById[category['id'].toString()] ?? true,
+          'questions': questions.where((q) => q['category_id'].toString() == category['id'].toString()).map((q) => q['text'].toString()).toList(),
         }
     ];
   }
