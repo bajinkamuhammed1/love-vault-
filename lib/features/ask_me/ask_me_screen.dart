@@ -91,7 +91,7 @@ class _ComposeAskSheetState extends State<_ComposeAskSheet>{
   final _question=TextEditingController();
   final _options=List.generate(4,(_)=>TextEditingController());
   bool _multiple=false,_busy=false;
-  @override void dispose(){_question.dispose();for(final c in _options)c.dispose();super.dispose();}
+  @override void dispose(){_question.dispose();for(final c in _options){c.dispose();}super.dispose();}
   Future<void> _send() async {
     final text=_question.text.trim(); final opts=_options.map((c)=>c.text.trim()).where((v)=>v.isNotEmpty).toList();
     if(text.isEmpty||(_multiple&&opts.length<2))return;
@@ -108,7 +108,7 @@ class _ComposeAskSheetState extends State<_ComposeAskSheet>{
       Text('Ask ${widget.partner['display_name']??'your partner'}',style:Theme.of(context).textTheme.headlineSmall),
       const SizedBox(height:16),TextField(controller:_question,maxLength:1000,minLines:2,maxLines:5,decoration:const InputDecoration(labelText:'Your question',border:OutlineInputBorder())),
       SwitchListTile.adaptive(contentPadding:EdgeInsets.zero,title:const Text('Multiple choice'),subtitle:const Text('Otherwise they can write their own answer.'),value:_multiple,onChanged:_busy?null:(v)=>setState(()=>_multiple=v)),
-      if(_multiple)for(int i=0;i<_options.length;i++)Padding(padding:const EdgeInsets.only(bottom:8),child:TextField(controller:_options[i],decoration:InputDecoration(labelText:'Option ${i+1}',border:const OutlineInputBorder()))),
+      if(_multiple)for(int i=0;i<_options.length;i++) Padding(padding:const EdgeInsets.only(bottom:8),child:TextField(controller:_options[i],decoration:InputDecoration(labelText:'Option ${i+1}',border:const OutlineInputBorder()))),
       const SizedBox(height:8),FilledButton.icon(onPressed:_busy?null:_send,icon:const Icon(Icons.send_outlined),label:const Text('Send Question')),
     ])),
   );
@@ -126,9 +126,11 @@ class _AnswerSheetState extends State<_AnswerSheet>{
     final options=(widget.question['options'] as List?)?.map((e)=>e.toString()).toList()??const<String>[];
     return Padding(padding:EdgeInsets.only(left:20,right:20,top:20,bottom:MediaQuery.viewInsetsOf(context).bottom+20),child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       Text(widget.question['question_text']?.toString()??'',style:Theme.of(context).textTheme.titleLarge),const SizedBox(height:16),
-      if(multi)for(final option in options)RadioListTile<String>(title:Text(option),value:option,groupValue:_selected,onChanged:(v)=>setState(()=>_selected=v))
+      if(multi)for(final option in options) _ChoiceTile(label:option,selected:_selected==option,onTap:()=>setState(()=>_selected=option))
       else TextField(controller:_text,minLines:3,maxLines:6,maxLength:2000,decoration:const InputDecoration(labelText:'Your answer',border:OutlineInputBorder())),
       const SizedBox(height:12),FilledButton(onPressed:(){final value=multi?_selected:_text.text.trim();if(value!=null&&value.isNotEmpty)Navigator.pop(context,value);},child:const Text('Send Answer')),
     ])));
   }
 }
+
+class _ChoiceTile extends StatelessWidget{const _ChoiceTile({required this.label,required this.selected,required this.onTap});final String label;final bool selected;final VoidCallback onTap;@override Widget build(BuildContext context)=>Padding(padding:const EdgeInsets.only(bottom:8),child:InkWell(borderRadius:BorderRadius.circular(18),onTap:onTap,child:Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:selected?const Color(0xFFFFEDF1):Colors.white,border:Border.all(color:selected?const Color(0xFFE9365A):const Color(0xFFE9E4E5)),borderRadius:BorderRadius.circular(18)),child:Row(children:[Icon(selected?Icons.radio_button_checked:Icons.radio_button_off,color:selected?const Color(0xFFE9365A):const Color(0xFF8A8587)),const SizedBox(width:12),Expanded(child:Text(label))]))));}
