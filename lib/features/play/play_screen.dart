@@ -33,6 +33,7 @@ class _PlayScreenState extends State<PlayScreen> {
   Future<void> _spin() async {
     setState((){_busy=true;_error=null;_wheelTurns+=3;});
     try {
+      await Future.delayed(const Duration(milliseconds: 1100));
       final started=await _play.start(widget.roomId,guessEnabled:_guessMode);
       final id=started['session_id'].toString();
       final state=await _play.state(id);
@@ -42,10 +43,6 @@ class _PlayScreenState extends State<PlayScreen> {
     finally{if(mounted)setState(()=>_busy=false);}
   }
 
-  void _startPolling(String id){
-    _poller?.cancel();
-    _poller=Timer.periodic(const Duration(seconds:2),(_)=>_refresh(id));
-  }
   Future<void> _refresh(String id) async {
     try{
       final state=await _play.state(id);
