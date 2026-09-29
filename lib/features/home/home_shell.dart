@@ -161,11 +161,19 @@ class _HomePage extends StatelessWidget {
     return DateTime(now.year, now.month, now.day).difference(DateTime(start.year, start.month, start.day)).inDays;
   }
 
+  DateTime _anniversaryForYear(DateTime start, int year) {
+    if (start.month == 2 && start.day == 29) {
+      final leap = DateTime(year, 3, 0).day == 29;
+      return DateTime(year, 2, leap ? 29 : 28);
+    }
+    return DateTime(year, start.month, start.day);
+  }
+
   ({int days, DateTime date}) _nextAnniversary(DateTime start) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    var next = DateTime(now.year, start.month, start.day);
-    if (next.isBefore(today) || next == today) next = DateTime(now.year + 1, start.month, start.day);
+    var next = _anniversaryForYear(start, now.year);
+    if (next.isBefore(today)) next = _anniversaryForYear(start, now.year + 1);
     return (days: next.difference(today).inDays, date: next);
   }
 
@@ -259,7 +267,7 @@ class _HomePage extends StatelessWidget {
                     children: [
                       Text('Next anniversary', style: Theme.of(context).textTheme.titleLarge),
                       const SizedBox(height: 3),
-                      Text('${_pretty(next.date)} • ${next.days} days to go'),
+                      Text(next.days == 0 ? '${_pretty(next.date)} • Today ❤️' : '${_pretty(next.date)} • ${next.days} days to go'),
                     ],
                   ),
                 ),
