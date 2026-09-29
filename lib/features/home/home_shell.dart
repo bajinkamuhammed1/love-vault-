@@ -4,6 +4,7 @@ import '../play/play_screen.dart';
 import '../settings/settings_screen.dart';
 import '../ask_me/ask_me_screen.dart';
 import '../surprise/surprise_screen.dart';
+import '../memories/memories_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, required this.room});
@@ -68,11 +69,7 @@ class _HomeShellState extends State<HomeShell> {
           PlayScreen(roomId: widget.room['id'].toString()),
           AskMeScreen(roomId: widget.room['id'].toString()),
           SurpriseScreen(roomId: widget.room['id'].toString()),
-          const _PlaceholderPage(
-            icon: Icons.auto_stories_outlined,
-            title: 'Memories',
-            text: 'Save meaningful text memories together.',
-          ),
+          MemoriesScreen(roomId: widget.room['id'].toString()),
         ],
       ),
       bottomNavigationBar: NavigationBar(
