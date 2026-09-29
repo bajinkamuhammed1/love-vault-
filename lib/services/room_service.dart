@@ -39,7 +39,14 @@ class RoomService {
     final result=await _client.rpc('create_room',params:{'p_display_name':displayName.trim()});
     return Map<String,dynamic>.from((result as List).single as Map);
   }
-  Future<void> setRelationshipStartDate(String roomId, DateTime date) async {\n    await _client.rpc('set_relationship_start_date',params:{'p_room_id':roomId,'p_started_on':'${date.year.toString().padLeft(4,'0')}-${date.month.toString().padLeft(2,'0')}-${date.day.toString().padLeft(2,'0')}'});\n  }\n  Future<Map<String,dynamic>> joinRoom({required String roomCode,required String displayName}) async {
+  Future<void> setRelationshipStartDate(String roomId, DateTime date) async {
+    final y=date.year.toString().padLeft(4,'0');
+    final m=date.month.toString().padLeft(2,'0');
+    final d=date.day.toString().padLeft(2,'0');
+    await _client.rpc('set_relationship_start_date',params:{'p_room_id':roomId,'p_started_on':'$y-$m-$d'});
+  }
+
+  Future<Map<String,dynamic>> joinRoom({required String roomCode,required String displayName}) async {
     final result=await _client.rpc('join_room',params:{'p_room_code':normalizeCode(roomCode),'p_display_name':displayName.trim()});
     return Map<String,dynamic>.from((result as List).single as Map);
   }
