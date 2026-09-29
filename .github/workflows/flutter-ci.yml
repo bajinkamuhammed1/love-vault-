@@ -1,12 +1,10 @@
 name: Flutter CI
-
 on:
   workflow_dispatch:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-
 jobs:
   analyze-and-build-android:
     runs-on: ubuntu-latest
@@ -16,29 +14,27 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Generate Android scaffold
+      - name: Generate stable Love Vault Android app
         run: |
-          flutter create --platforms=android --project-name love_vault .
+          flutter create --platforms=android --project-name love_vault --org com.lovevault .
           rm -f test/widget_test.dart
+          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
       - name: Get dependencies
         run: flutter pub get
       - name: Analyze
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
-      - name: Build debug APK
+      - name: Build upgrade-compatible APK
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
           test -n "$SUPABASE_URL" || (echo "Missing SUPABASE_URL GitHub Actions secret" && exit 1)
           test -n "$SUPABASE_PUBLISHABLE_KEY" || (echo "Missing SUPABASE_PUBLISHABLE_KEY GitHub Actions secret" && exit 1)
-          flutter build apk --debug \
-            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
-
-      - name: Upload debug APK
+          flutter build apk --debug --dart-define=SUPABASE_URL="$SUPABASE_URL" --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: love-vault-debug-apk
+          name: love-vault-android
           path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 7
