@@ -4,26 +4,27 @@ class PlayService {
   PlayService(this._client);
   final SupabaseClient _client;
 
-  Future<Map<String, dynamic>> start(String roomId) async {
+  Future<Map<String, dynamic>> start(String roomId, {required bool guessEnabled}) async {
     final result = await _client.rpc(
       'start_play_session',
-      params: {'p_room_id': roomId, 'p_guess_enabled': false},
+      params: {'p_room_id': roomId, 'p_guess_enabled': guessEnabled},
     );
     return Map<String, dynamic>.from((result as List).single as Map);
   }
 
   Future<void> submitAnswer(String sessionId, String answer) async {
-    await _client.rpc(
-      'submit_play_answer',
-      params: {'p_session_id': sessionId, 'p_answer': answer.trim()},
-    );
+    await _client.rpc('submit_play_answer',
+        params: {'p_session_id': sessionId, 'p_answer': answer.trim()});
+  }
+
+  Future<void> submitGuess(String sessionId, String guess) async {
+    await _client.rpc('submit_play_guess',
+        params: {'p_session_id': sessionId, 'p_guess': guess.trim()});
   }
 
   Future<Map<String, dynamic>> state(String sessionId) async {
-    final result = await _client.rpc(
-      'get_play_state',
-      params: {'p_session_id': sessionId},
-    );
+    final result = await _client.rpc('get_play_state',
+        params: {'p_session_id': sessionId});
     return Map<String, dynamic>.from(result as Map);
   }
 }
