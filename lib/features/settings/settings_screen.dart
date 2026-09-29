@@ -88,12 +88,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: Text(category['name']?.toString() ?? 'Category'),
                     subtitle: _saving.contains(category['id'])
                         ? const Text('Saving…')
-                        : null,
+                        : Text('${(category['questions'] as List?)?.length ?? 0} questions'),
                     value: category['enabled'] == true,
                     onChanged: _saving.contains(category['id'])
                         ? null
                         : (value) => _toggle(category, value),
                   ),
+                ),
+              for (final category in categories)
+                ExpansionTile(
+                  leading: Text(category['emoji']?.toString() ?? '💬', style: const TextStyle(fontSize: 22)),
+                  title: Text('${category['name']} question library'),
+                  subtitle: Text('${(category['questions'] as List?)?.length ?? 0} available'),
+                  children: [
+                    for (final q in (category['questions'] as List?) ?? const [])
+                      ListTile(leading: const Icon(Icons.question_mark, size: 18), title: Text(q.toString())),
+                  ],
                 ),
               if (categories.isEmpty)
                 const Padding(
