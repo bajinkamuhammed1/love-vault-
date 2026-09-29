@@ -22,6 +22,11 @@ class PlayService {
         params: {'p_session_id': sessionId, 'p_guess': guess.trim()});
   }
 
+  Future<String?> currentSession(String roomId) async {
+    final result = await _client.rpc('get_current_play_session', params: {'p_room_id': roomId});
+    return result?.toString();
+  }
+
   Future<Map<String, dynamic>> state(String sessionId) async {
     final result = await _client.rpc('get_play_state',
         params: {'p_session_id': sessionId});
