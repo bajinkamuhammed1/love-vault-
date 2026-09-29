@@ -16,8 +16,84 @@ class _HomeShellState extends State<HomeShell>{int _index=0;late final RoomServi
   endDrawer:Drawer(child:SafeArea(child:ListView(padding:const EdgeInsets.all(16),children:[const SizedBox(height:8),Text('Love Vault',style:Theme.of(context).textTheme.headlineSmall),Text('Private space for two',style:Theme.of(context).textTheme.bodyMedium),const SizedBox(height:24),ListTile(leading:const Icon(Icons.person_outline),title:const Text('Profile'),onTap:(){Navigator.pop(context);Navigator.push(context,MaterialPageRoute(builder:(_)=>const ProfileScreen())).then((_)=>_refresh());}),ListTile(leading:const Icon(Icons.settings_outlined),title:const Text('Settings'),onTap:(){Navigator.pop(context);Navigator.push(context,MaterialPageRoute(builder:(_)=>SettingsScreen(roomId:id)));})]))),
   body:IndexedStack(index:_index,children:[_HomePage(room:_room),PlayScreen(roomId:id),AskMeScreen(roomId:id),MemoriesScreen(roomId:id),SurpriseScreen(roomId:id)]),
   bottomNavigationBar:NavigationBar(selectedIndex:_index,onDestinationSelected:(v)=>setState(()=>_index=v),destinations:List.generate(_labels.length,(i)=>NavigationDestination(icon:Icon(_icons[i]),selectedIcon:Icon(_icons[i]),label:_labels[i]))));}}
-class _HomePage extends StatelessWidget{const _HomePage({required this.room});final Map<String,dynamic> room;@override Widget build(BuildContext context){final members=(room['members'] as List?)??const[];final connected=members.length>=2;final code=room['room_code']?.toString()??'';return ListView(padding:const EdgeInsets.fromLTRB(24,28,24,110),children:[
- Container(padding:const EdgeInsets.all(26),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFFFFF0F3),Color(0xFFFFF8EE)],begin:Alignment.topLeft,end:Alignment.bottomRight),borderRadius:BorderRadius.circular(30)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Row(children:[CircleAvatar(backgroundColor:Color(0xFFE9365A),child:Icon(Icons.favorite,color:Colors.white)),SizedBox(width:12),Text('LOVE VAULT',style:TextStyle(fontFamily:'sans-serif',fontWeight:FontWeight.w700,color:Color(0xFFE9365A),letterSpacing:1))]),const SizedBox(height:28),Text(connected?'Our private space':'Waiting for your partner',style:Theme.of(context).textTheme.headlineLarge),const SizedBox(height:12),Text(connected?'A place for your questions, memories, surprises and games together.':'Share your private code so your partner can join you.',style:Theme.of(context).textTheme.bodyLarge),const SizedBox(height:20),Container(padding:const EdgeInsets.symmetric(horizontal:14,vertical:10),decoration:BoxDecoration(color:const Color(0xFFFFDDE4),borderRadius:BorderRadius.circular(22)),child:Text(connected?'●  Both of you are connected':'●  Waiting for partner',style:const TextStyle(fontFamily:'sans-serif',color:Color(0xFFE9365A),fontWeight:FontWeight.w600)))]),
- const SizedBox(height:20),Card(child:Padding(padding:const EdgeInsets.all(22),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('PRIVATE VAULT CODE',style:TextStyle(fontFamily:'sans-serif',fontWeight:FontWeight.w600,color:Color(0xFF746D70))),const SizedBox(height:8),SelectableText(code,style:Theme.of(context).textTheme.headlineMedium),const SizedBox(height:14),Wrap(spacing:8,runSpacing:8,children:[for(final m in members)Chip(avatar:const Icon(Icons.favorite_outline,size:17),label:Text(m['display_name']?.toString()??'Partner')),if(!connected)const Chip(label:Text('Waiting…'))])]))),
- const SizedBox(height:20),Text('Together',style:Theme.of(context).textTheme.headlineSmall),const SizedBox(height:12),Row(children:[Expanded(child:_MiniCard(icon:Icons.sports_esports_outlined,title:'Play',text:'6-question rounds')),const SizedBox(width:12),Expanded(child:_MiniCard(icon:Icons.chat_bubble_outline,title:'Ask',text:'Know each other'))])\n ]);}}
+class _HomePage extends StatelessWidget {
+  const _HomePage({required this.room});
+  final Map<String, dynamic> room;
+
+  @override
+  Widget build(BuildContext context) {
+    final members = (room['members'] as List?) ?? const [];
+    final connected = members.length >= 2;
+    final code = room['room_code']?.toString() ?? '';
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 110),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(26),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFFF0F3), Color(0xFFFFF8EE)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(children: [
+                CircleAvatar(backgroundColor: Color(0xFFE9365A), child: Icon(Icons.favorite, color: Colors.white)),
+                SizedBox(width: 12),
+                Text('LOVE VAULT', style: TextStyle(fontFamily: 'sans-serif', fontWeight: FontWeight.w700, color: Color(0xFFE9365A), letterSpacing: 1)),
+              ]),
+              const SizedBox(height: 28),
+              Text(connected ? 'Our private space' : 'Waiting for your partner', style: Theme.of(context).textTheme.headlineLarge),
+              const SizedBox(height: 12),
+              Text(connected ? 'A place for your questions, memories, surprises and games together.' : 'Share your private code so your partner can join you.', style: Theme.of(context).textTheme.bodyLarge),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(color: const Color(0xFFFFDDE4), borderRadius: BorderRadius.circular(22)),
+                child: Text(connected ? '●  Both of you are connected' : '●  Waiting for partner', style: const TextStyle(fontFamily: 'sans-serif', color: Color(0xFFE9365A), fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('PRIVATE VAULT CODE', style: TextStyle(fontFamily: 'sans-serif', fontWeight: FontWeight.w600, color: Color(0xFF746D70))),
+                const SizedBox(height: 8),
+                SelectableText(code, style: Theme.of(context).textTheme.headlineMedium),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final m in members) Chip(avatar: const Icon(Icons.favorite_outline, size: 17), label: Text((m as Map)['display_name']?.toString() ?? 'Partner')),
+                    if (!connected) const Chip(label: Text('Waiting…')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text('Together', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 12),
+        const Row(
+          children: [
+            Expanded(child: _MiniCard(icon: Icons.sports_esports_outlined, title: 'Play', text: '6-question rounds')),
+            SizedBox(width: 12),
+            Expanded(child: _MiniCard(icon: Icons.chat_bubble_outline, title: 'Ask', text: 'Know each other')),
+          ],
+        ),
+      ],
+    );
+  }
+}
 class _MiniCard extends StatelessWidget{const _MiniCard({required this.icon,required this.title,required this.text});final IconData icon;final String title,text;@override Widget build(BuildContext context)=>Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(icon,color:const Color(0xFFE9365A)),const SizedBox(height:12),Text(title,style:Theme.of(context).textTheme.titleLarge),const SizedBox(height:4),Text(text,style:Theme.of(context).textTheme.bodyMedium)])));}
