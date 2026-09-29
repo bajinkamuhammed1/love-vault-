@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../play/play_screen.dart';
+
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, required this.room});
 
@@ -47,11 +49,7 @@ class _HomeShellState extends State<HomeShell> {
         index: _index,
         children: [
           _HomePage(roomCode: roomCode, connected: widget.room['is_locked'] == true),
-          const _PlaceholderPage(
-            icon: Icons.casino_outlined,
-            title: 'Play',
-            text: 'Spin an enabled category and answer the same question together.',
-          ),
+          PlayScreen(roomId: widget.room['id'].toString()),
           const _PlaceholderPage(
             icon: Icons.question_answer_outlined,
             title: 'Ask Me',
