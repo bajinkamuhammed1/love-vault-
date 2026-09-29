@@ -64,7 +64,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       try{await _categories.addQuestion(roomId:widget.roomId,categoryId:category['id'] as int,text:q.text,options:choices);_reload();if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Question added for both of you.')));}
       catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Could not add that question.')));}
     }
-    q.dispose();for(final x in opts)x.dispose();
+    q.dispose();for(final x in opts){x.dispose();}
   }
 
   @override
