@@ -15,14 +15,23 @@ class _PlayScreenState extends State<PlayScreen> {
   final _guess = TextEditingController();
   Map<String,dynamic>? _state;
   bool _busy=false, _guessMode=true;
+  int _wheelTurns=0;
   String? _error;
   Timer? _poller;
 
-  @override void initState(){super.initState();_play=PlayService(Supabase.instance.client);}
+  @override void initState(){super.initState();_play=PlayService(Supabase.instance.client);_discover();_poller=Timer.periodic(const Duration(seconds:2),(_)=>_discover());}
+  Future<void> _discover() async {
+    try {
+      final id=await _play.currentSession(widget.roomId);
+      if(id==null)return;
+      final state=await _play.state(id);
+      if(mounted)setState(()=>_state=state);
+    } catch(_){}
+  }
   @override void dispose(){_poller?.cancel();_answer.dispose();_guess.dispose();super.dispose();}
 
   Future<void> _spin() async {
-    setState((){_busy=true;_error=null;});
+    setState((){_busy=true;_error=null;_wheelTurns+=3;});
     try {
       final started=await _play.start(widget.roomId,guessEnabled:_guessMode);
       final id=started['session_id'].toString();
@@ -74,7 +83,7 @@ class _PlayScreenState extends State<PlayScreen> {
     final s=_state;
     if(s==null)return Center(child:SingleChildScrollView(padding:const EdgeInsets.all(24),child:Column(
       mainAxisSize:MainAxisSize.min,children:[
-        const Icon(Icons.casino_outlined,size:72),const SizedBox(height:16),
+        TweenAnimationBuilder<double>(duration:const Duration(milliseconds:1100),tween:Tween(begin:0,end:_wheelTurns.toDouble()),builder:(context,v,child)=>Transform.rotate(angle:v*6.28318,child:child),child:const CircleAvatar(radius:48,child:Icon(Icons.casino_outlined,size:58))),const SizedBox(height:16),
         Text('Spin for a question',style:Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height:8),const Text('The spinner chooses from categories enabled for your room.'),
         const SizedBox(height:16),
@@ -96,6 +105,8 @@ class _PlayScreenState extends State<PlayScreen> {
     final guesses=(s['guesses'] as List?)??const[];
 
     return ListView(padding:const EdgeInsets.all(24),children:[
+      Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text('Question ${s['question_number'] ?? 1} of 6',style:Theme.of(context).textTheme.titleMedium),Text('${s['answer_count'] ?? 0}/2 answered')]),
+      const SizedBox(height:14),
       Center(child:Text('${s['category_emoji']??''} ${s['category_name']??''}',style:Theme.of(context).textTheme.titleLarge)),
       const SizedBox(height:18),
       Card(child:Padding(padding:const EdgeInsets.all(20),child:Text(s['question_text']?.toString()??'',style:Theme.of(context).textTheme.headlineSmall,textAlign:TextAlign.center))),
@@ -132,7 +143,7 @@ class _PlayScreenState extends State<PlayScreen> {
           )),
         ],
         const SizedBox(height:16),
-        OutlinedButton.icon(onPressed:_busy?null:(){_answer.clear();_guess.clear();setState(()=>_state=null);},icon:const Icon(Icons.refresh),label:const Text('Spin Again')),
+        OutlinedButton.icon(onPressed:_busy?null:(){_answer.clear();_guess.clear();setState(()=>_state=null);},icon:const Icon(Icons.refresh),label:Text((s['question_number']??1)==6?'Start New Round':'Next Question')),
       ],
       if(_error!=null)...[const SizedBox(height:12),Text(_error!,textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.error))],
     ]);
