@@ -20,10 +20,10 @@ class _PlayScreenState extends State<PlayScreen>{
   if(_error!=null)Text(_error!,style:TextStyle(color:Theme.of(context).colorScheme.error)),FilledButton.icon(onPressed:_busy?null:_spin,icon:const Icon(Icons.casino),label:Text(_busy?'Spinning…':'Spin'))
  ])));
  final status=s['status']?.toString();final answered=s['my_answer']!=null;final guessed=s['my_guess']!=null;final revealed=status=='revealed'||status=='complete';final opts=(s['options'] as List?)??const[];final answers=(s['answers'] as List?)??const[];final guesses=(s['guesses'] as List?)??const[];
- return ListView(padding:const EdgeInsets.all(20),children:[
-  Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text('Question ${s['question_number']??1} of 6',style:Theme.of(context).textTheme.titleMedium),Text('${s['answer_count']??0}/2 answered')]),const SizedBox(height:12),
+ return ListView(padding:const EdgeInsets.fromLTRB(24,28,24,110),children:[
+  Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text('PLAY TOGETHER  •  Question ${s['question_number']??1} of 6',style:Theme.of(context).textTheme.titleMedium),Text('${s['answer_count']??0}/2 answered')]),const SizedBox(height:12),
   Center(child:Text('${s['category_emoji']??''} ${s['category_name']??''}',style:Theme.of(context).textTheme.titleLarge)),const SizedBox(height:12),
-  Card(child:Padding(padding:const EdgeInsets.all(20),child:Text(s['question_text']?.toString()??'',style:Theme.of(context).textTheme.headlineSmall,textAlign:TextAlign.center))),const SizedBox(height:14),
+  Container(padding:const EdgeInsets.all(26),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFFFFF0F3),Color(0xFFFFF8EE)]),borderRadius:BorderRadius.circular(28)),child:Text(s['question_text']?.toString()??'',style:Theme.of(context).textTheme.headlineMedium,textAlign:TextAlign.center)),const SizedBox(height:14),
   if(!answered)...[_options(opts,_choice,(v)=>setState(()=>_choice=v)),FilledButton.icon(onPressed:_choice==null||_busy?null:_answer,icon:const Icon(Icons.arrow_forward),label:const Text('Next'))]
   else if(status=='answering')...[
    const Icon(Icons.check_circle_outline,size:44),const SizedBox(height:8),Text('Answer saved. Waiting for your partner… (${s['answer_count']}/2)',textAlign:TextAlign.center)]
