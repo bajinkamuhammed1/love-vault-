@@ -11,8 +11,8 @@ class PlayScreen extends StatefulWidget {
 
 class _PlayScreenState extends State<PlayScreen> {
   late final PlayService _play;
-  final _answer = TextEditingController();
-  final _guess = TextEditingController();
+  String? _selectedAnswer;
+  String? _selectedGuess;
   Map<String,dynamic>? _state;
   bool _busy=false, _guessMode=true;
   int _wheelTurns=0;
@@ -28,7 +28,7 @@ class _PlayScreenState extends State<PlayScreen> {
       if(mounted)setState(()=>_state=state);
     } catch(_){}
   }
-  @override void dispose(){_poller?.cancel();_answer.dispose();_guess.dispose();super.dispose();}
+  @override void dispose(){_poller?.cancel();super.dispose();}
 
   Future<void> _spin() async {
     setState((){_busy=true;_error=null;_wheelTurns+=3;});
@@ -52,16 +52,16 @@ class _PlayScreenState extends State<PlayScreen> {
     }catch(_){}
   }
   Future<void> _submitAnswer() async {
-    final s=_state;if(s==null||_answer.text.trim().isEmpty)return;
+    final s=_state;if(s==null||_selectedAnswer==null)return;
     await _action(() async {
-      await _play.submitAnswer(s['session_id'].toString(),_answer.text);
+      await _play.submitAnswer(s['session_id'].toString(),_selectedAnswer!);
       await _refresh(s['session_id'].toString());
     });
   }
   Future<void> _submitGuess() async {
-    final s=_state;if(s==null||_guess.text.trim().isEmpty)return;
+    final s=_state;if(s==null||_selectedGuess==null)return;
     await _action(() async {
-      await _play.submitGuess(s['session_id'].toString(),_guess.text);
+      await _play.submitGuess(s['session_id'].toString(),_selectedGuess!);
       await _refresh(s['session_id'].toString());
     });
   }
@@ -84,11 +84,7 @@ class _PlayScreenState extends State<PlayScreen> {
         Text('Spin for a question',style:Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height:8),const Text('The spinner chooses from categories enabled for your room.'),
         const SizedBox(height:16),
-        SwitchListTile.adaptive(
-          title:const Text('Guess Mode'),
-          subtitle:const Text('After answering, guess what your partner wrote before the reveal.'),
-          value:_guessMode,onChanged:_busy?null:(v)=>setState(()=>_guessMode=v),
-        ),
+        const Card(child:ListTile(leading:Icon(Icons.people_alt_outlined),title:Text('Answer + partner guess'),subtitle:Text('Pick your answer, then choose what you think your partner picked.'))),
         if(_error!=null)Text(_error!,style:TextStyle(color:Theme.of(context).colorScheme.error)),
         const SizedBox(height:12),
         FilledButton.icon(onPressed:_busy?null:_spin,icon:const Icon(Icons.casino),label:const Text('Spin')),
@@ -100,6 +96,7 @@ class _PlayScreenState extends State<PlayScreen> {
     final revealed=status=='revealed'||status=='complete';
     final answers=(s['answers'] as List?)??const[];
     final guesses=(s['guesses'] as List?)??const[];
+    final options=(s['options'] as List?)?.map((e)=>e.toString()).toList()??const <String>[];
 
     return ListView(padding:const EdgeInsets.all(24),children:[
       Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text('Question ${s['question_number'] ?? 1} of 6',style:Theme.of(context).textTheme.titleMedium),Text('${s['answer_count'] ?? 0}/2 answered')]),
@@ -109,8 +106,8 @@ class _PlayScreenState extends State<PlayScreen> {
       Card(child:Padding(padding:const EdgeInsets.all(20),child:Text(s['question_text']?.toString()??'',style:Theme.of(context).textTheme.headlineSmall,textAlign:TextAlign.center))),
       const SizedBox(height:20),
       if(!answered)...[
-        TextField(controller:_answer,minLines:3,maxLines:6,maxLength:2000,decoration:const InputDecoration(labelText:'Your answer',border:OutlineInputBorder())),
-        FilledButton(onPressed:_busy?null:_submitAnswer,child:const Text('Lock In Answer')),
+        Card(child:Column(children:[for(final option in options)RadioListTile<String>(value:option,groupValue:_selectedAnswer,onChanged:_busy?null:(v)=>setState(()=>_selectedAnswer=v),title:Text(option))])),
+        FilledButton.icon(onPressed:_busy||_selectedAnswer==null?null:_submitAnswer,icon:const Icon(Icons.arrow_forward),label:const Text('Next')),
       ] else if(status=='answering')...[
         const Center(child:Icon(Icons.lock_clock_outlined,size:44)),const SizedBox(height:10),
         Text('Answer locked in. Waiting for your partner… (${s['answer_count']}/2)',textAlign:TextAlign.center),
@@ -119,8 +116,8 @@ class _PlayScreenState extends State<PlayScreen> {
         const SizedBox(height:8),
         const Text('What do you think your partner answered?',textAlign:TextAlign.center),
         const SizedBox(height:16),
-        TextField(controller:_guess,minLines:2,maxLines:5,maxLength:2000,decoration:const InputDecoration(labelText:'Your guess',border:OutlineInputBorder())),
-        FilledButton.icon(onPressed:_busy?null:_submitGuess,icon:const Icon(Icons.psychology_alt_outlined),label:const Text('Lock In Guess')),
+        Card(child:Column(children:[for(final option in options)RadioListTile<String>(value:option,groupValue:_selectedGuess,onChanged:_busy?null:(v)=>setState(()=>_selectedGuess=v),title:Text(option))])),
+        FilledButton.icon(onPressed:_busy||_selectedGuess==null?null:_submitGuess,icon:const Icon(Icons.arrow_forward),label:const Text('Next')),
       ] else if(status=='guessing')...[
         const Center(child:Icon(Icons.lock_outline,size:44)),const SizedBox(height:10),
         Text('Guess locked in. Waiting for your partner… (${s['guess_count']}/2)',textAlign:TextAlign.center),
@@ -140,7 +137,7 @@ class _PlayScreenState extends State<PlayScreen> {
           )),
         ],
         const SizedBox(height:16),
-        OutlinedButton.icon(onPressed:_busy?null:(){_answer.clear();_guess.clear();_spin();},icon:const Icon(Icons.arrow_forward),label:Text((s['question_number']??1)==6?'Start New Round':'Next Question')),
+        OutlinedButton.icon(onPressed:_busy?null:(){setState((){_selectedAnswer=null;_selectedGuess=null;});_spin();},icon:const Icon(Icons.arrow_forward),label:Text((s['question_number']??1)==6?'Start New Round':'Next Question')),
       ],
       if(_error!=null)...[const SizedBox(height:12),Text(_error!,textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.error))],
     ]);
