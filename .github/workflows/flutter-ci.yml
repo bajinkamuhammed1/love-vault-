@@ -26,3 +26,11 @@ jobs:
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - name: Build debug APK
         run: flutter build apk --debug --dart-define=SUPABASE_URL=https://example.supabase.co --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_ci_placeholder
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: love-vault-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
