@@ -27,8 +27,14 @@ class _PlayScreenState extends State<PlayScreen> {
       final id=await _play.currentGame(widget.roomId);
       Map<String,dynamic>? game;
       if(id!=null) game=await _play.gameState(id);
-      if(mounted)setState((){_categories=cats;_game=game;_index=_firstOpen(game);});
+      if(mounted)setState((){_categories=cats;_game=game;_index=_firstOpen(game);_error=null;});
     }catch(e){if(mounted)setState(()=>_error='Could not load Play.');}
+  }
+  Future<void> _retryLoad() async {
+    if(_busy)return;
+    setState((){_busy=true;_error=null;});
+    try{await _load();}
+    finally{if(mounted)setState(()=>_busy=false);}
   }
   Future<void> _refresh() async {
     final g=_game;if(g==null)return;
@@ -145,8 +151,12 @@ class _PlayScreenState extends State<PlayScreen> {
     Center(child:SizedBox(width:210,height:210,child:DecoratedBox(decoration:BoxDecoration(shape:BoxShape.circle,color:const Color(0xFFFFEDF1),border:Border.all(color:const Color(0xFFE9365A),width:3)),child:const Center(child:Icon(Icons.favorite,size:70,color:Color(0xFFE9365A)))))),
     const SizedBox(height:28),
     FilledButton.icon(onPressed:_busy||_categories.isEmpty?null:_spinAndStart,icon:const Icon(Icons.casino_outlined),label:Text(_busy?'Choosing your game…':'Spin & Play')),
-    if(_categories.isEmpty&&!_busy)const Padding(padding:EdgeInsets.all(20),child:Text('Enable at least one category in Settings to play.',textAlign:TextAlign.center)),
-    if(_error!=null)Padding(padding:const EdgeInsets.only(top:14),child:Text(_error!,textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.error))),
+    if(_categories.isEmpty&&!_busy&&_error==null)const Padding(padding:EdgeInsets.all(20),child:Text('Enable at least one category in Settings to play.',textAlign:TextAlign.center)),
+    if(_error!=null)...[
+      Padding(padding:const EdgeInsets.only(top:14),child:Text(_error!,textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.error))),
+      const SizedBox(height:10),
+      Center(child:TextButton.icon(onPressed:_busy?null:_retryLoad,icon:const Icon(Icons.refresh),label:const Text('Try again'))),
+    ],
   ]);
 }
 
