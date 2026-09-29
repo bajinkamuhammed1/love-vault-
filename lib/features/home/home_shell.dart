@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../play/play_screen.dart';
+import '../settings/settings_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, required this.room});
@@ -40,7 +41,20 @@ class _HomeShellState extends State<HomeShell> {
               ),
               const Divider(),
               const ListTile(leading: Icon(Icons.person_outline), title: Text('Profile')),
-              const ListTile(leading: Icon(Icons.settings_outlined), title: Text('Settings')),
+              ListTile(
+                leading: const Icon(Icons.settings_outlined),
+                title: const Text('Settings'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SettingsScreen(
+                        roomId: widget.room['id'].toString(),
+                      ),
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ),
