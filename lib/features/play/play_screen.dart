@@ -37,7 +37,7 @@ class _PlayScreenState extends State<PlayScreen> {
       final id=started['session_id'].toString();
       final state=await _play.state(id);
       if(!mounted)return;
-      setState(()=>_state=state); _startPolling(id);
+      setState(()=>_state=state);
     } catch(e){if(mounted)setState(()=>_error=_friendly(e.toString()));}
     finally{if(mounted)setState(()=>_busy=false);}
   }
@@ -51,7 +51,7 @@ class _PlayScreenState extends State<PlayScreen> {
       final state=await _play.state(id);
       if(!mounted)return;
       setState(()=>_state=state);
-      if(state['status']=='revealed'||state['status']=='complete')_poller?.cancel();
+
     }catch(_){}
   }
   Future<void> _submitAnswer() async {
@@ -143,7 +143,7 @@ class _PlayScreenState extends State<PlayScreen> {
           )),
         ],
         const SizedBox(height:16),
-        OutlinedButton.icon(onPressed:_busy?null:(){_answer.clear();_guess.clear();setState(()=>_state=null);},icon:const Icon(Icons.refresh),label:Text((s['question_number']??1)==6?'Start New Round':'Next Question')),
+        OutlinedButton.icon(onPressed:_busy?null:(){_answer.clear();_guess.clear();_spin();},icon:const Icon(Icons.arrow_forward),label:Text((s['question_number']??1)==6?'Start New Round':'Next Question')),
       ],
       if(_error!=null)...[const SizedBox(height:12),Text(_error!,textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.error))],
     ]);
