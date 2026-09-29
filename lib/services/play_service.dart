@@ -4,32 +4,21 @@ class PlayService {
   PlayService(this._client);
   final SupabaseClient _client;
 
-  Future<Map<String, dynamic>> start(String roomId, {required bool guessEnabled}) async {
-    final result = await _client.rpc(
-      'start_play_session',
-      params: {'p_room_id': roomId, 'p_guess_enabled': guessEnabled},
-    );
-    return Map<String, dynamic>.from((result as List).single as Map);
+  Future<List<Map<String,dynamic>>> categories(String roomId) async {
+    final r=await _client.rpc('list_play_categories',params:{'p_room_id':roomId});
+    return (r as List).map((e)=>Map<String,dynamic>.from(e as Map)).toList();
   }
-
-  Future<void> submitAnswer(String sessionId, String answer) async {
-    await _client.rpc('submit_play_answer',
-        params: {'p_session_id': sessionId, 'p_answer': answer.trim()});
+  Future<String> startCategory(String roomId,int categoryId) async =>
+      (await _client.rpc('start_category_game',params:{'p_room_id':roomId,'p_category_id':categoryId})).toString();
+  Future<String?> currentGame(String roomId) async {
+    final r=await _client.rpc('get_current_category_game',params:{'p_room_id':roomId});
+    return r?.toString();
   }
-
-  Future<void> submitGuess(String sessionId, String guess) async {
-    await _client.rpc('submit_play_guess',
-        params: {'p_session_id': sessionId, 'p_guess': guess.trim()});
-  }
-
-  Future<String?> currentSession(String roomId) async {
-    final result = await _client.rpc('get_current_play_session', params: {'p_room_id': roomId});
-    return result?.toString();
-  }
-
-  Future<Map<String, dynamic>> state(String sessionId) async {
-    final result = await _client.rpc('get_play_state',
-        params: {'p_session_id': sessionId});
-    return Map<String, dynamic>.from(result as Map);
-  }
+  Future<Map<String,dynamic>> gameState(String gameId) async =>
+      Map<String,dynamic>.from(await _client.rpc('get_category_game_state',params:{'p_game_id':gameId}) as Map);
+  Future<void> saveAnswer(String gameId,int questionId,String answer) async =>
+      _client.rpc('save_category_answer',params:{'p_game_id':gameId,'p_question_id':questionId,'p_answer':answer});
+  Future<void> saveGuess(String gameId,int questionId,String guess) async =>
+      _client.rpc('save_category_guess',params:{'p_game_id':gameId,'p_question_id':questionId,'p_guess':guess});
+  Future<void> quit(String gameId) async => _client.rpc('quit_category_game',params:{'p_game_id':gameId});
 }
