@@ -41,11 +41,23 @@ class _PlayScreenState extends State<PlayScreen> {
     if(status=='guessing'){for(var i=0;i<qs.length;i++){if((qs[i] as Map)['my_guess']==null)return i;}}
     return preferred.clamp(0,qs.length-1);
   }
-  Future<void> _start(Map<String,dynamic> cat) async {
+  Future<void> _spinAndStart() async {
+    if(_categories.isEmpty)return;
     setState((){_busy=true;_error=null;});
+    try{
+      final nextId=await _play.nextCategory(widget.roomId);
+      final cat=_categories.firstWhere((x)=>(x['id'] as num).toInt()==nextId,orElse:()=>_categories.first);
+      if(mounted){await showDialog<void>(context:context,barrierDismissible:false,builder:(context)=>_SpinDialog(category:cat));}
+      if(!mounted)return;
+      await _start(cat,manageBusy:false);
+    }catch(_){if(mounted)setState(()=>_error='Could not start the game. Please try again.');}
+    finally{if(mounted)setState(()=>_busy=false);}
+  }
+  Future<void> _start(Map<String,dynamic> cat,{bool manageBusy=true}) async {
+    if(manageBusy)setState((){_busy=true;_error=null;});
     try{final id=await _play.startCategory(widget.roomId,(cat['id'] as num).toInt());final g=await _play.gameState(id);if(mounted)setState((){_game=g;_index=0;});}
     catch(e){if(mounted)setState(()=>_error=e.toString().contains('partner')?'Your partner needs to join first.':'Could not start this category.');}
-    finally{if(mounted)setState(()=>_busy=false);}
+    finally{if(manageBusy&&mounted)setState(()=>_busy=false);}
   }
   Future<void> _pick(String value) async {
     final g=_game;if(g==null)return;final qs=(g['questions'] as List);final q=Map<String,dynamic>.from(qs[_index] as Map);
@@ -115,20 +127,19 @@ class _PlayScreenState extends State<PlayScreen> {
     ]);
   }
 
-  Widget _categoryPicker(BuildContext context)=>ListView(padding:const EdgeInsets.fromLTRB(22,28,22,110),children:[
-    Text('Play together',style:Theme.of(context).textTheme.headlineMedium),
-    const SizedBox(height:6),const Text('Choose a category. Answer its questions first, then guess your partner’s answers.'),
-    const SizedBox(height:22),
-    for(final c in _categories)Card(child:ListTile(
-      leading:Text(c['emoji']?.toString()??'💕',style:const TextStyle(fontSize:27)),
-      title:Text(c['name']?.toString()??'Category'),
-      subtitle:Text('${c['question_count']??0} questions'),
-      trailing:const Icon(Icons.arrow_forward_ios,size:16),
-      onTap:_busy?null:()=>_start(c),
-    )),
-    if(_categories.isEmpty&&!_busy)const Padding(padding:EdgeInsets.all(20),child:Text('No categories are enabled. You can enable them in Settings.',textAlign:TextAlign.center)),
-    if(_busy)const Center(child:Padding(padding:EdgeInsets.all(20),child:CircularProgressIndicator())),
-    if(_error!=null)Text(_error!,textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.error)),
+  Widget _categoryPicker(BuildContext context)=>ListView(padding:const EdgeInsets.fromLTRB(22,34,22,110),children:[
+    const SizedBox(height:28),
+    const Center(child:Text('💕',style:TextStyle(fontSize:54))),
+    const SizedBox(height:16),
+    Text('Ready to play?',textAlign:TextAlign.center,style:Theme.of(context).textTheme.headlineMedium),
+    const SizedBox(height:8),
+    Text('Spin for your next game. Your enabled categories stay private in Settings and Love Vault keeps the games moving in order without repeating the same category.',textAlign:TextAlign.center,style:Theme.of(context).textTheme.bodyLarge),
+    const SizedBox(height:30),
+    Center(child:SizedBox(width:210,height:210,child:DecoratedBox(decoration:BoxDecoration(shape:BoxShape.circle,color:const Color(0xFFFFEDF1),border:Border.all(color:const Color(0xFFE9365A),width:3)),child:const Center(child:Icon(Icons.favorite,size:70,color:Color(0xFFE9365A)))))),
+    const SizedBox(height:28),
+    FilledButton.icon(onPressed:_busy||_categories.isEmpty?null:_spinAndStart,icon:const Icon(Icons.casino_outlined),label:Text(_busy?'Choosing your game…':'Spin & Play')),
+    if(_categories.isEmpty&&!_busy)const Padding(padding:EdgeInsets.all(20),child:Text('Enable at least one category in Settings to play.',textAlign:TextAlign.center)),
+    if(_error!=null)Padding(padding:const EdgeInsets.only(top:14),child:Text(_error!,textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.error)),
   ]);
 }
 
@@ -136,3 +147,7 @@ class _WaitCard extends StatelessWidget{
   const _WaitCard({required this.text});final String text;
   @override Widget build(BuildContext context)=>Container(margin:const EdgeInsets.only(top:12),padding:const EdgeInsets.all(20),decoration:BoxDecoration(color:const Color(0xFFFFF1F4),borderRadius:BorderRadius.circular(22)),child:Row(children:[const Icon(Icons.favorite_outline,color:Color(0xFFE9365A)),const SizedBox(width:12),Expanded(child:Text(text))]));
 }
+
+
+class _SpinDialog extends StatefulWidget{const _SpinDialog({required this.category});final Map<String,dynamic> category;@override State<_SpinDialog> createState()=>_SpinDialogState();}
+class _SpinDialogState extends State<_SpinDialog>{Timer? t;@override void initState(){super.initState();t=Timer(const Duration(milliseconds:1100),(){if(mounted)Navigator.pop(context);});}@override void dispose(){t?.cancel();super.dispose();}@override Widget build(BuildContext context)=>AlertDialog(content:Padding(padding:const EdgeInsets.symmetric(vertical:24),child:Column(mainAxisSize:MainAxisSize.min,children:[const SizedBox(width:70,height:70,child:CircularProgressIndicator(strokeWidth:7)),const SizedBox(height:24),Text('Spinning…',style:Theme.of(context).textTheme.titleLarge),const SizedBox(height:8),const Text('Finding your next game',textAlign:TextAlign.center)])));}
