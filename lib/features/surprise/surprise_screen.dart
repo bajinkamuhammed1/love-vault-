@@ -9,7 +9,11 @@ class SurpriseScreen extends StatefulWidget{
 class _SurpriseScreenState extends State<SurpriseScreen>{
   late final SurpriseService _service; late Future<List<Map<String,dynamic>>> _future;
   @override void initState(){super.initState();_service=SurpriseService(Supabase.instance.client);_reload();}
-  void _reload() {\n    setState(() {\n      _future = _service.list(widget.roomId);\n    });\n  }
+  void _reload() {
+    setState(() {
+      _future = _service.list(widget.roomId);
+    });
+  }
 
   Future<void> _compose() async{
     final p=await _service.partner(widget.roomId); if(!mounted)return;
