@@ -17,7 +17,9 @@ jobs:
           channel: stable
           cache: true
       - name: Generate Android scaffold
-        run: flutter create --platforms=android --project-name love_vault .
+        run: |
+          flutter create --platforms=android --project-name love_vault .
+          rm -f test/widget_test.dart
       - name: Get dependencies
         run: flutter pub get
       - name: Analyze
