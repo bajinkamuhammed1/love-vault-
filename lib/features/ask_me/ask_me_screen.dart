@@ -14,7 +14,11 @@ class _AskMeScreenState extends State<AskMeScreen> {
   bool _busy=false;
 
   @override void initState(){super.initState();_service=AskMeService(Supabase.instance.client);_reload();}
-  void _reload() {\n    setState(() {\n      _future = _service.questions(widget.roomId);\n    });\n  }
+  void _reload() {
+    setState(() {
+      _future = _service.questions(widget.roomId);
+    });
+  }
 
   Future<void> _compose() async {
     final partner=await _service.partner(widget.roomId);
