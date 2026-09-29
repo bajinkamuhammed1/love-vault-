@@ -48,7 +48,14 @@ class _AskMeScreenState extends State<AskMeScreen> {
 
   @override Widget build(BuildContext context){
     return Scaffold(
-      body:FutureBuilder<List<Map<String,dynamic>>>(
+      body:Column(children:[
+        Padding(padding:const EdgeInsets.fromLTRB(24,28,24,14),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:const Color(0xFFFFEDF1),borderRadius:BorderRadius.circular(20)),child:const Icon(Icons.chat_bubble_outline,color:Color(0xFFE9365A),size:30)),
+          const SizedBox(width:16),
+          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Ask Me',style:Theme.of(context).textTheme.headlineMedium),const SizedBox(height:5),Text('Ask your partner something you really want to know.',style:Theme.of(context).textTheme.bodyLarge)])),
+          FilledButton.icon(onPressed:_busy?null:_compose,icon:const Icon(Icons.add),label:const Text('Ask'))
+        ])),
+        Expanded(child:FutureBuilder<List<Map<String,dynamic>>>(
         future:_future,
         builder:(context,snapshot){
           if(snapshot.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
@@ -56,7 +63,7 @@ class _AskMeScreenState extends State<AskMeScreen> {
           final items=snapshot.data??const[];
           if(items.isEmpty)return const Center(child:Padding(padding:EdgeInsets.all(24),child:Text('No questions yet. Tap Ask to send your partner one.',textAlign:TextAlign.center)));
           return RefreshIndicator(onRefresh:()async=>_reload(),child:ListView.builder(
-            padding:const EdgeInsets.fromLTRB(16,16,16,96),itemCount:items.length,
+            padding:const EdgeInsets.fromLTRB(24,8,24,96),itemCount:items.length,
             itemBuilder:(context,i){
               final q=items[i], mine=q['asker_id']==_service.userId, answer=q['answer'];
               return Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -70,9 +77,8 @@ class _AskMeScreenState extends State<AskMeScreen> {
             },
           ));
         },
-      ),
-      floatingActionButton:FloatingActionButton.extended(onPressed:_busy?null:_compose,icon:const Icon(Icons.add_comment_outlined),label:const Text('Ask')),
-    );
+      )),
+    ]));
   }
 }
 
