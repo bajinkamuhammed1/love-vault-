@@ -72,8 +72,15 @@ class _PlayScreenState extends State<PlayScreen> {
   }
   Future<void> _quit() async {
     final g=_game;if(g==null)return;
-    await _play.quit(g['game_id'].toString());
-    if(mounted)setState((){_game=null;_index=0;});
+    setState((){_busy=true;_error=null;});
+    try {
+      await _play.quit(g['game_id'].toString());
+      if(mounted)setState((){_game=null;_index=0;});
+    } catch (_) {
+      if(mounted)setState(()=>_error='Could not leave this game. Please try again.');
+    } finally {
+      if(mounted)setState(()=>_busy=false);
+    }
   }
 
   @override Widget build(BuildContext context){
