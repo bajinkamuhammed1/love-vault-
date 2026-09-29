@@ -1,75 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../services/memory_service.dart';
-
-class MemoriesScreen extends StatefulWidget{
-  const MemoriesScreen({super.key,required this.roomId}); final String roomId;
-  @override State<MemoriesScreen> createState()=>_MemoriesScreenState();
-}
-class _MemoriesScreenState extends State<MemoriesScreen>{
-  late final MemoryService _service; late Future<List<Map<String,dynamic>>> _future;
-  @override void initState(){super.initState();_service=MemoryService(Supabase.instance.client);_reload();}
-  void _reload() {
-    setState(() {
-      _future = _service.list(widget.roomId);
-    });
-  }
-
-  Future<void> _edit([Map<String,dynamic>? memory]) async{
-    final ok=await showModalBottomSheet<bool>(context:context,isScrollControlled:true,builder:(_)=>_MemoryEditor(service:_service,roomId:widget.roomId,memory:memory));
-    if(ok==true)_reload();
-  }
-  Future<void> _delete(Map<String,dynamic> m) async{
-    final yes=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Delete memory?'),content:const Text('This removes the memory from your shared vault.'),actions:[
-      TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Cancel')),
-      FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Delete')),
-    ]));
-    if(yes==true){try{await _service.delete(m['id'].toString());_reload();}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Could not delete the memory.')));}}
-  }
-  @override Widget build(BuildContext context)=>Scaffold(
-    body:FutureBuilder<List<Map<String,dynamic>>>(future:_future,builder:(context,s){
-      if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
-      if(s.hasError)return Center(child:FilledButton.icon(onPressed:_reload,icon:const Icon(Icons.refresh),label:const Text('Try Again')));
-      final items=s.data??const[];
-      if(items.isEmpty)return const Center(child:Padding(padding:EdgeInsets.all(24),child:Text('No memories yet. Save a meaningful moment as text.',textAlign:TextAlign.center)));
-      return RefreshIndicator(onRefresh:()async=>_reload(),child:ListView.builder(padding:const EdgeInsets.fromLTRB(16,16,16,96),itemCount:items.length,itemBuilder:(context,i){
-        final m=items[i],mine=m['author_id']==_service.userId;
-        return Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Row(children:[Expanded(child:Text(m['title']?.toString()??'',style:Theme.of(context).textTheme.titleMedium)),if(mine)PopupMenuButton<String>(onSelected:(v)=>v=='edit'?_edit(m):_delete(m),itemBuilder:(_)=>const[PopupMenuItem(value:'edit',child:Text('Edit')),PopupMenuItem(value:'delete',child:Text('Delete'))])]),
-          Text(_pretty(m['memory_date']?.toString()??''),style:Theme.of(context).textTheme.labelMedium),const SizedBox(height:8),
-          Text(m['body']?.toString()??''),
-        ])));
-      }));
-    }),
-    floatingActionButton:FloatingActionButton.extended(onPressed:()=>_edit(),icon:const Icon(Icons.add),label:const Text('Add Memory')),
-  );
-  String _pretty(String raw){final d=DateTime.tryParse(raw);return d==null?raw:'${d.day.toString().padLeft(2,'0')}/${d.month.toString().padLeft(2,'0')}/${d.year}';}
-}
-
-class _MemoryEditor extends StatefulWidget{
-  const _MemoryEditor({required this.service,required this.roomId,this.memory});
-  final MemoryService service; final String roomId; final Map<String,dynamic>? memory;
-  @override State<_MemoryEditor> createState()=>_MemoryEditorState();
-}
-class _MemoryEditorState extends State<_MemoryEditor>{
-  late final TextEditingController _title,_body; late DateTime _date; bool _busy=false;
-  @override void initState(){super.initState();_title=TextEditingController(text:widget.memory?['title']?.toString()??'');_body=TextEditingController(text:widget.memory?['body']?.toString()??'');_date=DateTime.tryParse(widget.memory?['memory_date']?.toString()??'')??DateTime.now();}
-  @override void dispose(){_title.dispose();_body.dispose();super.dispose();}
-  Future<void> _pick() async{final d=await showDatePicker(context:context,firstDate:DateTime(2000),lastDate:DateTime.now(),initialDate:_date);if(d!=null)setState(()=>_date=d);}
-  Future<void> _save() async{
-    if(_title.text.trim().isEmpty||_body.text.trim().isEmpty)return;setState(()=>_busy=true);
-    try{
-      if(widget.memory==null)await widget.service.create(roomId:widget.roomId,title:_title.text,body:_body.text,date:_date);
-      else await widget.service.update(id:widget.memory!['id'].toString(),title:_title.text,body:_body.text,date:_date);
-      if(mounted)Navigator.pop(context,true);
-    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Could not save the memory.')));}
-    finally{if(mounted)setState(()=>_busy=false);}
-  }
-  @override Widget build(BuildContext context)=>Padding(padding:EdgeInsets.only(left:20,right:20,top:20,bottom:MediaQuery.viewInsetsOf(context).bottom+20),child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    Text(widget.memory==null?'Add Memory':'Edit Memory',style:Theme.of(context).textTheme.headlineSmall),const SizedBox(height:16),
-    TextField(controller:_title,maxLength:120,decoration:const InputDecoration(labelText:'Title',border:OutlineInputBorder())),const SizedBox(height:8),
-    TextField(controller:_body,maxLength:5000,minLines:4,maxLines:8,decoration:const InputDecoration(labelText:'Memory',border:OutlineInputBorder())),
-    ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.calendar_today_outlined),title:const Text('Memory date'),subtitle:Text('${_date.day}/${_date.month}/${_date.year}'),trailing:IconButton(onPressed:_pick,icon:const Icon(Icons.edit_calendar))),
-    FilledButton.icon(onPressed:_busy?null:_save,icon:const Icon(Icons.save_outlined),label:Text(widget.memory==null?'Save Memory':'Save Changes')),
-  ])));
-}
+import 'package:flutter/material.dart';import 'package:supabase_flutter/supabase_flutter.dart';import '../../services/memory_service.dart';
+class MemoriesScreen extends StatefulWidget{const MemoriesScreen({super.key,required this.roomId});final String roomId;@override State<MemoriesScreen> createState()=>_MemoriesScreenState();}
+class _MemoriesScreenState extends State<MemoriesScreen>{late final MemoryService _service;late Future<List<Map<String,dynamic>>> _future;@override void initState(){super.initState();_service=MemoryService(Supabase.instance.client);_reload();}void _reload()=>setState(()=>_future=_service.list(widget.roomId));Future<void> _edit([Map<String,dynamic>? m])async{final ok=await showModalBottomSheet<bool>(context:context,isScrollControlled:true,builder:(_)=>_Editor(service:_service,roomId:widget.roomId,memory:m));if(ok==true)_reload();}Future<void> _delete(Map<String,dynamic> m)async{final yes=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Delete memory?'),content:const Text('This removes it from your shared vault.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Delete'))]));if(yes==true){await _service.delete(m['id'].toString());_reload();}}
+ @override Widget build(BuildContext context)=>Scaffold(body:FutureBuilder<List<Map<String,dynamic>>>(future:_future,builder:(context,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:FilledButton(onPressed:_reload,child:const Text('Try Again')));final a=s.data??const[];return RefreshIndicator(onRefresh:()async=>_reload(),child:ListView(padding:const EdgeInsets.fromLTRB(24,28,24,110),children:[
+  Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:const Color(0xFFFFEDF1),borderRadius:BorderRadius.circular(20)),child:const Icon(Icons.photo_outlined,color:Color(0xFFE9365A),size:30)),const SizedBox(width:16),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Our Memories',style:Theme.of(context).textTheme.headlineMedium),const SizedBox(height:5),Text('The moments that became part of our story.',style:Theme.of(context).textTheme.bodyLarge)])),FilledButton.icon(onPressed:()=>_edit(),icon:const Icon(Icons.add),label:const Text('Add'))]),const SizedBox(height:30),
+  if(a.isEmpty)...[const SizedBox(height:80),const Icon(Icons.auto_awesome_outlined,size:58,color:Color(0xFFE7A5B2)),const SizedBox(height:18),Text('Start Your Story',textAlign:TextAlign.center,style:Theme.of(context).textTheme.headlineMedium),const SizedBox(height:8),Text('Your first memory can be the beginning of your collection.',textAlign:TextAlign.center,style:Theme.of(context).textTheme.bodyLarge)]
+  else for(final m in a)Padding(padding:const EdgeInsets.only(bottom:14),child:Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[const Text('💗',style:TextStyle(fontSize:25)),const SizedBox(width:10),Expanded(child:Text(m['title']?.toString()??'',style:Theme.of(context).textTheme.titleLarge)),if(m['author_id']==_service.userId)PopupMenuButton<String>(onSelected:(v)=>v=='edit'?_edit(m):_delete(m),itemBuilder:(_)=>const[PopupMenuItem(value:'edit',child:Text('Edit')),PopupMenuItem(value:'delete',child:Text('Delete'))])]),const SizedBox(height:8),Text(m['body']?.toString()??'',style:Theme.of(context).textTheme.bodyLarge),const SizedBox(height:12),Text(_pretty(m['memory_date']?.toString()??''),style:Theme.of(context).textTheme.bodyMedium)]))))
+ ]));}));String _pretty(String r){final d=DateTime.tryParse(r);return d==null?r:'${d.day} ${['','January','February','March','April','May','June','July','August','September','October','November','December'][d.month]} ${d.year}';}}
+class _Editor extends StatefulWidget{const _Editor({required this.service,required this.roomId,this.memory});final MemoryService service;final String roomId;final Map<String,dynamic>? memory;@override State<_Editor> createState()=>_EditorState();}
+class _EditorState extends State<_Editor>{late final TextEditingController t,b;late DateTime d;bool busy=false;@override void initState(){super.initState();t=TextEditingController(text:widget.memory?['title']?.toString()??'');b=TextEditingController(text:widget.memory?['body']?.toString()??'');d=DateTime.tryParse(widget.memory?['memory_date']?.toString()??'')??DateTime.now();}@override void dispose(){t.dispose();b.dispose();super.dispose();}Future<void> save()async{if(t.text.trim().isEmpty||b.text.trim().isEmpty)return;setState(()=>busy=true);if(widget.memory==null){await widget.service.create(roomId:widget.roomId,title:t.text,body:b.text,date:d);}else{await widget.service.update(id:widget.memory!['id'].toString(),title:t.text,body:b.text,date:d);}if(mounted)Navigator.pop(context,true);}@override Widget build(BuildContext context)=>Padding(padding:EdgeInsets.only(left:24,right:24,top:16,bottom:MediaQuery.viewInsetsOf(context).bottom+24),child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Text(widget.memory==null?'Add a Memory':'Edit Memory',style:Theme.of(context).textTheme.headlineSmall),const SizedBox(height:18),TextField(controller:t,maxLength:120,decoration:const InputDecoration(labelText:'Memory title')),const SizedBox(height:8),TextField(controller:b,maxLength:5000,minLines:4,maxLines:8,decoration:const InputDecoration(labelText:'Tell the story…')),ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.calendar_today_outlined,color:Color(0xFFE9365A)),title:Text('${d.day}/${d.month}/${d.year}'),onTap:()async{final x=await showDatePicker(context:context,firstDate:DateTime(2000),lastDate:DateTime.now(),initialDate:d);if(x!=null)setState(()=>d=x);}),FilledButton.icon(onPressed:busy?null:save,icon:const Icon(Icons.favorite_outline),label:const Text('Save Memory'))])));}
