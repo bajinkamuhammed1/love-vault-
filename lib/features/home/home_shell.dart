@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../play/play_screen.dart';
 import '../settings/settings_screen.dart';
+import '../ask_me/ask_me_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, required this.room});
@@ -64,11 +65,7 @@ class _HomeShellState extends State<HomeShell> {
         children: [
           _HomePage(roomCode: roomCode, connected: widget.room['is_locked'] == true),
           PlayScreen(roomId: widget.room['id'].toString()),
-          const _PlaceholderPage(
-            icon: Icons.question_answer_outlined,
-            title: 'Ask Me',
-            text: 'Send a written or multiple-choice question to your partner.',
-          ),
+          AskMeScreen(roomId: widget.room['id'].toString()),
           const _PlaceholderPage(
             icon: Icons.card_giftcard_outlined,
             title: 'Surprise',
