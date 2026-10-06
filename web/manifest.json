@@ -1,0 +1,11 @@
+{
+  "name": "Love Vault",
+  "short_name": "Love Vault",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#E9365A",
+  "description": "A private text-first connection app for two people.",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false
+}
