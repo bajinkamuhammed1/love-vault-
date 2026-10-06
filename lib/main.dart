@@ -39,10 +39,6 @@ class _BootstrapAppState extends State<_BootstrapApp> {
 
       await Supabase.initialize(url: url, publishableKey: publishableKey);
 
-      if (Supabase.instance.client.auth.currentSession == null) {
-        await Supabase.instance.client.auth.signInAnonymously();
-      }
-
       if (!mounted) return;
       setState(() => _ready = true);
     } catch (error) {
