@@ -7,11 +7,10 @@ class AskMeService {
   String get userId => _client.auth.currentUser!.id;
 
   Future<Map<String, dynamic>?> partner(String roomId) async {
-    final rows = await _client.from('room_members').select('user_id').eq('room_id', roomId);
+    final rows = await _client.from('vault_members').select('user_id, display_name').eq('vault_id', roomId);
     for (final row in rows) {
       if (row['user_id'] != userId) {
-        final profile = await _client.from('profiles').select('id, display_name').eq('id', row['user_id']).single();
-        return Map<String, dynamic>.from(profile);
+        return {'id': row['user_id'], 'display_name': row['display_name']};
       }
     }
     return null;
