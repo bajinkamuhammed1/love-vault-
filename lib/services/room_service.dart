@@ -4,50 +4,37 @@ class RoomService {
   RoomService(this._client);
   final SupabaseClient _client;
 
-  String normalizeCode(String input) {
-    final raw = input.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
-    if (raw.length == 8) return '${raw.substring(0,4)}-${raw.substring(4)}';
-    return input.trim().toUpperCase();
-  }
+  String get userId => _client.auth.currentUser!.id;
 
   Future<Map<String,dynamic>?> currentRoom() async {
-    final user=_client.auth.currentUser;if(user==null)return null;
-    final m=await _client.from('room_members').select('room_id').eq('user_id',user.id).maybeSingle();
-    if(m==null)return null;
-    return Map<String,dynamic>.from(await _client.from('rooms').select('id,room_code,is_locked,created_at,relationship_started_on').eq('id',m['room_id']).single());
+    final membership=await _client.from('vault_members').select('vault_id').eq('user_id',userId).maybeSingle();
+    if(membership==null)return null;
+    return roomSnapshot(membership['vault_id'].toString());
   }
 
-  Future<Map<String,dynamic>> roomSnapshot(String roomId) async {
-    final room=Map<String,dynamic>.from(await _client.from('rooms').select('id,room_code,is_locked,created_at,relationship_started_on').eq('id',roomId).single());
-    final members=await _client.from('room_members').select('user_id,joined_at').eq('room_id',roomId).order('joined_at');
-    final ids=members.map((e)=>e['user_id'].toString()).toList();
-    final profiles=ids.isEmpty ? <dynamic>[] : await _client.from('profiles').select('id,display_name').inFilter('id',ids);
-    final names={for(final p in profiles)p['id'].toString():p['display_name'].toString()};
-    room['members']=[for(final m in members){...m,'display_name':names[m['user_id'].toString()]??'Player'}];
-    return room;
+  Future<Map<String,dynamic>> roomSnapshot(String vaultId) async {
+    final vault=Map<String,dynamic>.from(await _client.from('vault').select('id,name,relationship_start_date,created_at').eq('id',vaultId).single());
+    final members=await _client.from('vault_members').select('user_id,slot,display_name,joined_at').eq('vault_id',vaultId).order('slot');
+    return {
+      'id': vault['id'],
+      'room_code': '',
+      'is_locked': true,
+      'created_at': vault['created_at'],
+      'relationship_started_on': vault['relationship_start_date'],
+      'members': [for(final m in members) Map<String,dynamic>.from(m)],
+    };
   }
 
   Future<Map<String,dynamic>> myProfile() async {
-    final id=_client.auth.currentUser!.id;
-    return Map<String,dynamic>.from(await _client.from('profiles').select('id,display_name').eq('id',id).single());
+    return Map<String,dynamic>.from(await _client.from('vault_members').select('user_id,display_name,slot').eq('user_id',userId).single());
   }
+
   Future<void> updateDisplayName(String name) async {
-    await _client.from('profiles').update({'display_name':name.trim(),'updated_at':DateTime.now().toUtc().toIso8601String()}).eq('id',_client.auth.currentUser!.id);
+    await _client.from('vault_members').update({'display_name':name.trim()}).eq('user_id',userId);
   }
 
-  Future<Map<String,dynamic>> createRoom(String displayName) async {
-    final result=await _client.rpc('create_room',params:{'p_display_name':displayName.trim()});
-    return Map<String,dynamic>.from((result as List).single as Map);
-  }
-  Future<void> setRelationshipStartDate(String roomId, DateTime date) async {
-    final y=date.year.toString().padLeft(4,'0');
-    final m=date.month.toString().padLeft(2,'0');
-    final d=date.day.toString().padLeft(2,'0');
-    await _client.rpc('set_relationship_start_date',params:{'p_room_id':roomId,'p_started_on':'$y-$m-$d'});
-  }
-
-  Future<Map<String,dynamic>> joinRoom({required String roomCode,required String displayName}) async {
-    final result=await _client.rpc('join_room',params:{'p_room_code':normalizeCode(roomCode),'p_display_name':displayName.trim()});
-    return Map<String,dynamic>.from((result as List).single as Map);
+  Future<Map<String,dynamic>> joinVault(String displayName) async {
+    final vaultId=await _client.rpc('join_love_vault',params:{'p_display_name':displayName.trim()});
+    return roomSnapshot(vaultId.toString());
   }
 }
