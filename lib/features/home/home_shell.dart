@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/room_service.dart';
 import '../play/play_screen.dart';
 import '../settings/settings_screen.dart';
+import '../question_bank/question_bank_screen.dart';
 import '../ask_me/ask_me_screen.dart';
 import '../surprise/surprise_screen.dart';
 import '../memories/memories_screen.dart';
@@ -111,6 +112,16 @@ class _HomeShellState extends State<HomeShell> {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())).then((_) => _refresh());
                 },
               ),
+              ListTile(
+                leading: const Icon(Icons.favorite_outline),
+                title: const Text('Question Bank'),
+                subtitle: const Text('Topics, custom questions & Spin'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionBankScreen()));
+                },
+              ),
+              const Divider(),
               ListTile(
                 leading: const Icon(Icons.settings_outlined),
                 title: const Text('Settings'),

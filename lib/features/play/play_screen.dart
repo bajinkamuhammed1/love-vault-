@@ -149,6 +149,47 @@ class _PlayScreenState extends State<PlayScreen> {
     }
   }
 
+  Future<void> _writeAnswer(Map<String, dynamic> q) async {
+    final controller = TextEditingController(text: q['my_answer']?.toString() ?? '');
+    final value = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Your private answer'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          minLines: 3,
+          maxLines: 7,
+          maxLength: 1000,
+          decoration: const InputDecoration(hintText: 'Write what you really think…', border: OutlineInputBorder()),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(onPressed: () {
+            if (controller.text.trim().isNotEmpty) Navigator.pop(context, controller.text.trim());
+          }, child: const Text('Lock in answer')),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value != null) await _answer(q, value);
+  }
+
+  Future<void> _markWritten(Map<String, dynamic> q, bool correct) async {
+    final game = _game;
+    if (game == null || _busy) return;
+    setState(() => _busy = true);
+    try {
+      await _play.markWrittenAnswer(game['game_id'].toString(), q['question_id'].toString(), correct);
+      final next = await _play.gameState(game['game_id'].toString());
+      if (mounted) setState(() => _game = next);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not save your mark.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   void _next(int length) {
     if (_index < length - 1) {
       setState(() => _index++);
@@ -176,6 +217,7 @@ class _PlayScreenState extends State<PlayScreen> {
     final answered = q['my_answer'] != null;
     final guessed = q['my_guess'] != null;
     final revealed = q['reveal_ready'] == true;
+    final written = q['question_type'] == 'written';
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
@@ -206,19 +248,60 @@ class _PlayScreenState extends State<PlayScreen> {
             Text(q['text']?.toString() ?? '', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 10),
             Text(
-              !answered
-                  ? 'Choose your answer'
-                  : !guessed
-                      ? 'Now guess what $partner chose'
+              written
+                  ? (!answered
+                      ? 'Write your answer privately'
                       : revealed
-                          ? 'Answer revealed'
-                          : 'Your guess is locked in',
+                          ? 'Both answers are ready'
+                          : 'Answer saved privately • waiting for $partner')
+                  : (!answered
+                      ? 'Choose your answer'
+                      : !guessed
+                          ? 'Now guess what $partner chose'
+                          : revealed
+                              ? 'Answer revealed'
+                              : 'Your guess is locked in'),
               textAlign: TextAlign.center,
             ),
           ]),
         ),
         const SizedBox(height: 18),
-        if (!answered)
+        if (written) ...[
+          if (!answered)
+            FilledButton.icon(
+              onPressed: _busy ? null : () => _writeAnswer(q),
+              icon: const Icon(Icons.edit_note),
+              label: const Text('Write my answer'),
+            )
+          else if (!revealed)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(color: const Color(0xFFFFF7F9), borderRadius: BorderRadius.circular(22)),
+              child: Column(children: [
+                const Icon(Icons.lock_outline, color: Color(0xFFE9365A)),
+                const SizedBox(height: 8),
+                const Text('Your answer is locked in.', style: TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                Text('It stays private until $partner answers too.', textAlign: TextAlign.center),
+              ]),
+            )
+          else ...[
+            _WrittenReveal(
+              partner: partner,
+              myAnswer: q['my_answer']?.toString() ?? '',
+              partnerAnswer: q['partner_answer']?.toString() ?? '',
+              myMark: q['my_mark_for_partner'] as bool?,
+              onMark: _busy ? null : (value) => _markWritten(q, value),
+            ),
+          ],
+          const SizedBox(height: 14),
+          if (answered)
+            FilledButton.icon(
+              onPressed: _busy ? null : () => _next(questions.length),
+              icon: Icon(_index == questions.length - 1 ? Icons.grid_view_rounded : Icons.arrow_forward),
+              label: Text(_index == questions.length - 1 ? 'Back to games' : 'Next question'),
+            ),
+        ] else if (!answered)
           for (final option in options)
             _Choice(text: option, onTap: _busy ? null : () => _answer(q, option))
         else if (!guessed)
@@ -253,7 +336,7 @@ class _PlayScreenState extends State<PlayScreen> {
         const SizedBox(height: 10),
         Text('Spin for us', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 8),
-        const Text('The spinner picks an enabled category. The questions stay private in Settings until a game starts.', textAlign: TextAlign.center),
+        const Text('The spinner picks from categories you have switched on in your shared Question Bank.', textAlign: TextAlign.center),
         const SizedBox(height: 24),
         Center(
           child: SizedBox(
@@ -332,6 +415,56 @@ class _Choice extends StatelessWidget {
         ]),
       ),
     ),
+  );
+}
+
+class _WrittenReveal extends StatelessWidget {
+  const _WrittenReveal({required this.partner, required this.myAnswer, required this.partnerAnswer, required this.myMark, required this.onMark});
+  final String partner;
+  final String myAnswer;
+  final String partnerAnswer;
+  final bool? myMark;
+  final ValueChanged<bool>? onMark;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(22),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(colors: [Color(0xFFFFF0F4), Color(0xFFFFF8EE)]),
+      borderRadius: BorderRadius.circular(24),
+    ),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text('💕 Reveal together', textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge),
+      const SizedBox(height: 16),
+      _AnswerBubble(label: 'You', text: myAnswer),
+      const SizedBox(height: 10),
+      _AnswerBubble(label: partner, text: partnerAnswer),
+      const SizedBox(height: 16),
+      Text(myMark == null ? 'How would you mark $partner’s answer?' : (myMark! ? 'You marked it: Got it 💕' : 'You marked it: Not quite'), textAlign: TextAlign.center),
+      const SizedBox(height: 10),
+      if (myMark == null)
+        Row(children: [
+          Expanded(child: OutlinedButton.icon(onPressed: onMark == null ? null : () => onMark!(false), icon: const Icon(Icons.close), label: const Text('Not quite'))),
+          const SizedBox(width: 10),
+          Expanded(child: FilledButton.icon(onPressed: onMark == null ? null : () => onMark!(true), icon: const Icon(Icons.favorite), label: const Text('Got it'))),
+        ]),
+    ]),
+  );
+}
+
+class _AnswerBubble extends StatelessWidget {
+  const _AnswerBubble({required this.label, required this.text});
+  final String label;
+  final String text;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFE9365A))),
+      const SizedBox(height: 5),
+      Text(text),
+    ]),
   );
 }
 

@@ -31,4 +31,8 @@ class PlayService {
   Future<void> saveGuess(String gameId, String questionId, String guess) async {
     await _client.rpc('save_play_guess', params: {'p_game_id': gameId, 'p_question_id': questionId, 'p_guess': guess});
   }
+
+  Future<void> markWrittenAnswer(String gameId, String questionId, bool correct) async {
+    await _client.rpc('mark_written_answer', params: {'p_game_id': gameId, 'p_question_id': questionId, 'p_correct': correct});
+  }
 }
