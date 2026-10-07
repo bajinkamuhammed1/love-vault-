@@ -3,137 +3,184 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../services/category_service.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, required this.roomId});
   final String roomId;
-
-  @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  late final CategoryService _categories;
-  late Future<List<Map<String, dynamic>>> _future;
-  final Set<int> _saving = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _categories = CategoryService(Supabase.instance.client);
-    _future = _categories.listForRoom(widget.roomId);
-  }
-
-  void _reload() => setState(() {
-        _future = _categories.listForRoom(widget.roomId);
-      });
-
-  Future<void> _toggle(Map<String, dynamic> category, bool enabled) async {
-    final id = category['id'] as int;
-    setState(() => _saving.add(id));
-    try {
-      await _categories.setEnabled(
-        roomId: widget.roomId,
-        categoryId: id,
-        enabled: enabled,
-      );
-      _reload();
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not update that category.')),
-      );
-    } finally {
-      if (mounted) setState(() => _saving.remove(id));
-    }
-  }
-
-  Future<void> _addQuestion(Map<String,dynamic> category) async {
-    final q=TextEditingController(); final opts=List.generate(4,(_)=>TextEditingController());
-    final ok=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(
-      title:Text('Add to ${category['name']}'),
-      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        TextField(controller:q,maxLength:300,decoration:const InputDecoration(labelText:'Your question')),
-        const Text('Add 2–4 choices. Both partners will see this question.'),
-        for(int i=0;i<4;i++)TextField(controller:opts[i],decoration:InputDecoration(labelText:'Option ${i+1}')),
-      ])),
-      actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Add question'))],
-    ));
-    if(ok==true){
-      final choices=opts.map((e)=>e.text.trim()).where((e)=>e.isNotEmpty).toList();
-      if(q.text.trim().length<3||choices.length<2){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Add a question and at least 2 options.')));return;}
-      try{await _categories.addQuestion(roomId:widget.roomId,categoryId:category['id'] as int,text:q.text,options:choices);_reload();if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Question added for both of you.')));}
-      catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Could not add that question.')));}
-    }
-    q.dispose();for(final x in opts){x.dispose();}
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
+      body: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Text('Love Vault', style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 8),
+          const Text('Shared settings for the two of you.'),
+          const SizedBox(height: 24),
+          Card(
+            child: ListTile(
+              contentPadding: const EdgeInsets.all(18),
+              leading: const CircleAvatar(child: Icon(Icons.quiz_outlined)),
+              title: const Text('Question Bank'),
+              subtitle: const Text('200 categories • 1,400 questions • shared editing'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const _QuestionBankScreen()),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuestionBankScreen extends StatefulWidget {
+  const _QuestionBankScreen();
+  @override
+  State<_QuestionBankScreen> createState() => _QuestionBankScreenState();
+}
+
+class _QuestionBankScreenState extends State<_QuestionBankScreen> {
+  late final CategoryService _service;
+  late Future<List<Map<String, dynamic>>> _future;
+  String _search = '';
+  final Set<String> _saving = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _service = CategoryService(Supabase.instance.client);
+    _reload();
+  }
+
+  void _reload() => _future = _service.questionBank();
+
+  Future<void> _toggle(Map<String, dynamic> category, bool enabled) async {
+    final id = category['id'].toString();
+    setState(() => _saving.add(id));
+    try {
+      await _service.setEnabled(id, enabled);
+      if (!mounted) return;
+      setState(_reload);
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not update this category.')));
+    } finally {
+      if (mounted) setState(() => _saving.remove(id));
+    }
+  }
+
+  Future<void> _editQuestion(Map<String, dynamic> question) async {
+    final text = TextEditingController(text: question['question']?.toString());
+    final existing = (question['choices'] as List? ?? const []).map((e) => e.toString()).toList();
+    final choices = List.generate(4, (i) => TextEditingController(text: i < existing.length ? existing[i] : ''));
+
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit question'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: text, maxLength: 300, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'Question')),
+              const SizedBox(height: 8),
+              for (var i = 0; i < choices.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: TextField(controller: choices[i], decoration: InputDecoration(labelText: 'Choice ${i + 1}')),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save for both')),
+        ],
+      ),
+    );
+
+    if (save == true) {
+      final cleanChoices = choices.map((e) => e.text.trim()).where((e) => e.isNotEmpty).toList();
+      if (text.text.trim().length < 3 || cleanChoices.length < 2) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Keep a question and at least 2 choices.')));
+      } else {
+        try {
+          await _service.updateQuestion(questionId: question['id'].toString(), text: text.text, choices: cleanChoices);
+          if (mounted) {
+            setState(_reload);
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Question updated for both of you.')));
+          }
+        } catch (_) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not save that question.')));
+        }
+      }
+    }
+    text.dispose();
+    for (final controller in choices) {
+      controller.dispose();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Question Bank')),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _future,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
           if (snapshot.hasError) {
-            return Center(
-              child: FilledButton.icon(
-                onPressed: _reload,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Try Again'),
-              ),
-            );
+            return Center(child: FilledButton.icon(onPressed: () => setState(_reload), icon: const Icon(Icons.refresh), label: const Text('Try again')));
           }
+          final all = snapshot.data ?? const [];
+          final query = _search.trim().toLowerCase();
+          final categories = all.where((category) {
+            if (query.isEmpty) return true;
+            if (category['name'].toString().toLowerCase().contains(query)) return true;
+            return (category['questions'] as List? ?? const []).any((q) => (q as Map)['question'].toString().toLowerCase().contains(query));
+          }).toList();
 
-          final categories = snapshot.data ?? const [];
           return ListView(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 40),
             children: [
-              Text('Our Questions', style: Theme.of(context).textTheme.headlineMedium),
+              Text('Our Question Bank', style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 6),
-              const Text(
-                'Choose what appears in Play. Both of you share these settings, and both partners can add private questions.',
+              const Text('These questions feed the Play spinner. They stay here in Settings, not on the spin screen. Either of you can edit a question and both of you see the change.'),
+              const SizedBox(height: 16),
+              TextField(
+                onChanged: (value) => setState(() => _search = value),
+                decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search 200 categories', border: OutlineInputBorder()),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               for (final category in categories)
-                Padding(padding: const EdgeInsets.only(bottom: 10), child: Card(
-                  child: SwitchListTile.adaptive(
-                    secondary: Text(
-                      category['emoji']?.toString() ?? '💬',
-                      style: const TextStyle(fontSize: 26),
-                    ),
+                Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: ExpansionTile(
+                    leading: Text(category['emoji']?.toString() ?? '💕', style: const TextStyle(fontSize: 24)),
                     title: Text(category['name']?.toString() ?? 'Category'),
-                    subtitle: _saving.contains(category['id'])
-                        ? const Text('Saving…')
-                        : Text('${(category['questions'] as List?)?.length ?? 0} questions'),
-                    value: category['enabled'] == true,
-                    onChanged: _saving.contains(category['id'])
-                        ? null
-                        : (value) => _toggle(category, value),
+                    subtitle: Text('${(category['questions'] as List? ?? const []).length} questions'),
+                    trailing: Switch.adaptive(
+                      value: category['enabled'] == true,
+                      onChanged: _saving.contains(category['id'].toString()) ? null : (value) => _toggle(category, value),
+                    ),
+                    children: [
+                      for (final raw in category['questions'] as List? ?? const [])
+                        Builder(builder: (context) {
+                          final q = Map<String, dynamic>.from(raw as Map);
+                          return ListTile(
+                            leading: CircleAvatar(radius: 15, child: Text(q['sort_order'].toString())),
+                            title: Text(q['question'].toString()),
+                            subtitle: Text((q['choices'] as List? ?? const []).join(' • ')),
+                            trailing: const Icon(Icons.edit_outlined),
+                            onTap: () => _editQuestion(q),
+                          );
+                        }),
+                    ],
                   ),
-                )),
-              const SizedBox(height: 20),
-              Text('Question Library', style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              for (final category in categories)
-                ExpansionTile(
-                  leading: Text(category['emoji']?.toString() ?? '💬', style: const TextStyle(fontSize: 22)),
-                  title: Text('${category['emoji'] ?? '💬'}  ${category['name']}'),
-                  subtitle: Text('${(category['questions'] as List?)?.length ?? 0} available'),
-                  children: [
-                    ListTile(leading:const Icon(Icons.add_circle_outline),title:const Text('Add your own question'),subtitle:const Text('Both partners can add questions'),onTap:()=>_addQuestion(category)),
-                    for (final q in (category['questions'] as List?) ?? const [])
-                      ListTile(leading: Icon((q as Map)['custom']==true?Icons.favorite_outline:Icons.question_mark,size:18),title:Text(q['text'].toString()),subtitle:Text(((q['options'] as List?)??const[]).join(' • '))),
-                  ],
                 ),
-              if (categories.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text('No active categories are available.',
-                      textAlign: TextAlign.center),
-                ),
+              if (categories.isEmpty) const Padding(padding: EdgeInsets.all(32), child: Text('No matching categories.', textAlign: TextAlign.center)),
             ],
           );
         },
