@@ -5,132 +5,252 @@ import '../../services/ask_me_service.dart';
 class AskMeScreen extends StatefulWidget {
   const AskMeScreen({super.key, required this.roomId});
   final String roomId;
-  @override State<AskMeScreen> createState()=>_AskMeScreenState();
+  @override
+  State<AskMeScreen> createState() => _AskMeScreenState();
 }
 
 class _AskMeScreenState extends State<AskMeScreen> {
   late final AskMeService _service;
-  late Future<List<Map<String,dynamic>>> _future;
-  bool _busy=false;
+  late Future<List<Map<String, dynamic>>> _future;
+  int _filter = 0;
+  bool _busy = false;
 
-  @override void initState(){super.initState();_service=AskMeService(Supabase.instance.client);_reload();}
-  void _reload() {
-    setState(() {
-      _future = _service.questions(widget.roomId);
-    });
+  @override
+  void initState() {
+    super.initState();
+    _service = AskMeService(Supabase.instance.client);
+    _future = _service.questions(widget.roomId);
+  }
+
+  Future<void> _reload() async {
+    final next = _service.questions(widget.roomId);
+    setState(() => _future = next);
+    await next;
   }
 
   Future<void> _compose() async {
-    final partner=await _service.partner(widget.roomId);
-    if(!mounted)return;
-    if(partner==null){
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Your partner needs to join first.')));
+    final partner = await _service.partner(widget.roomId);
+    if (!mounted) return;
+    if (partner == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your partner needs to connect first.')));
       return;
     }
-    final created=await showModalBottomSheet<bool>(
-      context:context,isScrollControlled:true,
-      builder:(_)=>_ComposeAskSheet(service:_service,roomId:widget.roomId,partner:partner),
+    final created = await showModalBottomSheet<bool>(
+      context: context, isScrollControlled: true, useSafeArea: true,
+      builder: (_) => _ComposeSheet(service: _service, vaultId: widget.roomId, partner: partner),
     );
-    if(created==true)_reload();
+    if (created == true) await _reload();
   }
 
-  Future<void> _answer(Map<String,dynamic> q) async {
-    final result=await showModalBottomSheet<String>(
-      context:context,isScrollControlled:true,
-      builder:(_)=>_AnswerSheet(question:q),
+  Future<void> _answer(Map<String, dynamic> item) async {
+    final value = await showModalBottomSheet<String>(
+      context: context, isScrollControlled: true, useSafeArea: true,
+      builder: (_) => _AnswerSheet(item: item),
     );
-    if(result==null||result.trim().isEmpty)return;
-    setState(()=>_busy=true);
-    try{await _service.answer(q['id'].toString(),result);_reload();}
-    catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Could not send your answer.')));}
-    finally{if(mounted)setState(()=>_busy=false);}
+    if (value == null || value.trim().isEmpty) return;
+    setState(() => _busy = true);
+    try {
+      await _service.answer(item['id'].toString(), value);
+      await _reload();
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not send the answer.')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
-  @override Widget build(BuildContext context){
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      body:Column(children:[
-        Padding(padding:const EdgeInsets.fromLTRB(24,28,24,14),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:const Color(0xFFFFEDF1),borderRadius:BorderRadius.circular(20)),child:const Icon(Icons.chat_bubble_outline,color:Color(0xFFE9365A),size:30)),
-          const SizedBox(width:16),
-          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Ask Me',style:Theme.of(context).textTheme.headlineMedium),const SizedBox(height:5),Text('Ask your partner something you really want to know.',style:Theme.of(context).textTheme.bodyLarge)])),
-          FilledButton.icon(onPressed:_busy?null:_compose,icon:const Icon(Icons.add),label:const Text('Ask'))
-        ])),
-        Expanded(child:FutureBuilder<List<Map<String,dynamic>>>(
-        future:_future,
-        builder:(context,snapshot){
-          if(snapshot.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
-          if(snapshot.hasError)return Center(child:FilledButton.icon(onPressed:_reload,icon:const Icon(Icons.refresh),label:const Text('Try Again')));
-          final items=snapshot.data??const[];
-          if(items.isEmpty)return const Center(child:Padding(padding:EdgeInsets.all(24),child:Text('No questions yet. Tap Ask to send your partner one.',textAlign:TextAlign.center)));
-          return RefreshIndicator(onRefresh:()async=>_reload(),child:ListView.builder(
-            padding:const EdgeInsets.fromLTRB(24,8,24,96),itemCount:items.length,
-            itemBuilder:(context,i){
-              final q=items[i], mine=q['asker_id']==_service.userId, answer=q['answer'];
-              return Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                Row(children:[Icon(mine?Icons.outbox_outlined:Icons.markunread_outlined),const SizedBox(width:8),Text(mine?'You asked':'Asked to you',style:Theme.of(context).textTheme.labelLarge)]),
-                const SizedBox(height:10),Text(q['question_text']?.toString()??'',style:Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height:10),
-                if(answer!=null)...[const Text('Answer'),const SizedBox(height:4),Text((answer as Map)['answer_text']?.toString()??'')]
-                else if(!mine) FilledButton(onPressed:_busy?null:()=>_answer(q),child:const Text('Answer'))
-                else const Text('Waiting for your partner…'),
-              ])));
-            },
-          ));
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _busy ? null : _compose, icon: const Icon(Icons.add_rounded), label: const Text('Ask'),
+      ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+          if (snapshot.hasError) return Center(child: FilledButton.icon(onPressed: _reload, icon: const Icon(Icons.refresh), label: const Text('Try again')));
+          final all = snapshot.data ?? const <Map<String, dynamic>>[];
+          final incoming = all.where((q) => q['recipient_id'] == _service.userId && q['answer'] == null).toList();
+          final sent = all.where((q) => q['sender_id'] == _service.userId).toList();
+          final answered = all.where((q) => q['answer'] != null).toList();
+          final shown = _filter == 0 ? incoming : (_filter == 1 ? sent : answered);
+          return RefreshIndicator(
+            onRefresh: _reload,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(child: Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 28, 22, 12),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Ask', style: Theme.of(context).textTheme.headlineMedium),
+                    const SizedBox(height: 6),
+                    Text(incoming.isEmpty ? 'A private place for questions worth answering.' : '${incoming.length} waiting for you.', style: Theme.of(context).textTheme.bodyLarge),
+                  ]),
+                )),
+                SliverToBoxAdapter(child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal, padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                  child: Row(children: [
+                    _Tab(label: 'For you', count: incoming.length, selected: _filter == 0, onTap: () => setState(() => _filter = 0)),
+                    _Tab(label: 'Sent', count: sent.length, selected: _filter == 1, onTap: () => setState(() => _filter = 1)),
+                    _Tab(label: 'Answered', count: answered.length, selected: _filter == 2, onTap: () => setState(() => _filter = 2)),
+                  ]),
+                )),
+                if (shown.isEmpty)
+                  SliverFillRemaining(hasScrollBody: false, child: Center(child: Padding(
+                    padding: const EdgeInsets.all(36),
+                    child: Text(_filter == 0 ? 'Nothing waiting for you right now.' : _filter == 1 ? 'You have not sent a question yet.' : 'Answered questions will collect here.', textAlign: TextAlign.center),
+                  )))
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
+                    sliver: SliverList.builder(
+                      itemCount: shown.length,
+                      itemBuilder: (context, i) {
+                        final q = shown[i];
+                        final mine = q['sender_id'] == _service.userId;
+                        final canAnswer = q['recipient_id'] == _service.userId && q['answer'] == null;
+                        final answer = q['answer']?.toString();
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(18),
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Row(children: [
+                                Icon(mine ? Icons.north_east_rounded : Icons.south_west_rounded, size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(mine ? 'You asked' : 'For you', style: Theme.of(context).textTheme.labelLarge)),
+                                Text(answer == null ? 'Waiting' : 'Answered', style: Theme.of(context).textTheme.labelSmall),
+                              ]),
+                              const SizedBox(height: 14),
+                              Text(q['question']?.toString() ?? '', style: Theme.of(context).textTheme.titleMedium),
+                              if (q['question_type'] == 'multiple_choice') ...[
+                                const SizedBox(height: 6), Text('Multiple choice', style: Theme.of(context).textTheme.bodySmall),
+                              ],
+                              if (answer != null) ...[
+                                const Divider(height: 28),
+                                Text(mine ? 'Partner’s answer' : 'Your answer', style: Theme.of(context).textTheme.labelLarge),
+                                const SizedBox(height: 6), Text(answer),
+                              ] else if (canAnswer) ...[
+                                const SizedBox(height: 16),
+                                FilledButton(onPressed: _busy ? null : () => _answer(q), child: const Text('Answer privately')),
+                              ] else ...[
+                                const SizedBox(height: 12), const Text('Waiting for an answer…'),
+                              ],
+                            ]),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          );
         },
-      )),
-    ]));
+      ),
+    );
   }
 }
 
-class _ComposeAskSheet extends StatefulWidget {
-  const _ComposeAskSheet({required this.service,required this.roomId,required this.partner});
-  final AskMeService service; final String roomId; final Map<String,dynamic> partner;
-  @override State<_ComposeAskSheet> createState()=>_ComposeAskSheetState();
-}
-class _ComposeAskSheetState extends State<_ComposeAskSheet>{
-  final _question=TextEditingController();
-  final _options=List.generate(4,(_)=>TextEditingController());
-  bool _multiple=false,_busy=false;
-  @override void dispose(){_question.dispose();for(final c in _options){c.dispose();}super.dispose();}
-  Future<void> _send() async {
-    final text=_question.text.trim(); final opts=_options.map((c)=>c.text.trim()).where((v)=>v.isNotEmpty).toList();
-    if(text.isEmpty||(_multiple&&opts.length<2))return;
-    setState(()=>_busy=true);
-    try{
-      await widget.service.create(roomId:widget.roomId,targetId:widget.partner['id'].toString(),text:text,answerType:_multiple?'multiple_choice':'text',options:_multiple?opts:null);
-      if(mounted)Navigator.pop(context,true);
-    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Could not send the question.')));}
-    finally{if(mounted)setState(()=>_busy=false);}
-  }
-  @override Widget build(BuildContext context)=>Padding(
-    padding:EdgeInsets.only(left:20,right:20,top:20,bottom:MediaQuery.viewInsetsOf(context).bottom+20),
-    child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      Text('Ask ${widget.partner['display_name']??'your partner'}',style:Theme.of(context).textTheme.headlineSmall),
-      const SizedBox(height:16),TextField(controller:_question,maxLength:1000,minLines:2,maxLines:5,decoration:const InputDecoration(labelText:'Your question',border:OutlineInputBorder())),
-      SwitchListTile.adaptive(contentPadding:EdgeInsets.zero,title:const Text('Multiple choice'),subtitle:const Text('Otherwise they can write their own answer.'),value:_multiple,onChanged:_busy?null:(v)=>setState(()=>_multiple=v)),
-      if(_multiple)for(int i=0;i<_options.length;i++) Padding(padding:const EdgeInsets.only(bottom:8),child:TextField(controller:_options[i],decoration:InputDecoration(labelText:'Option ${i+1}',border:const OutlineInputBorder()))),
-      const SizedBox(height:8),FilledButton.icon(onPressed:_busy?null:_send,icon:const Icon(Icons.send_outlined),label:const Text('Send Question')),
-    ])),
+class _Tab extends StatelessWidget {
+  const _Tab({required this.label, required this.count, required this.selected, required this.onTap});
+  final String label; final int count; final bool selected; final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(right: 8),
+    child: ChoiceChip(selected: selected, onSelected: (_) => onTap(), label: Text('$label  $count')),
   );
 }
 
-class _AnswerSheet extends StatefulWidget{
-  const _AnswerSheet({required this.question}); final Map<String,dynamic> question;
-  @override State<_AnswerSheet> createState()=>_AnswerSheetState();
+class _ComposeSheet extends StatefulWidget {
+  const _ComposeSheet({required this.service, required this.vaultId, required this.partner});
+  final AskMeService service; final String vaultId; final Map<String, dynamic> partner;
+  @override State<_ComposeSheet> createState() => _ComposeSheetState();
 }
-class _AnswerSheetState extends State<_AnswerSheet>{
-  final _text=TextEditingController(); String? _selected;
-  @override void dispose(){_text.dispose();super.dispose();}
-  @override Widget build(BuildContext context){
-    final multi=widget.question['answer_type']=='multiple_choice';
-    final options=(widget.question['options'] as List?)?.map((e)=>e.toString()).toList()??const<String>[];
-    return Padding(padding:EdgeInsets.only(left:20,right:20,top:20,bottom:MediaQuery.viewInsetsOf(context).bottom+20),child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      Text(widget.question['question_text']?.toString()??'',style:Theme.of(context).textTheme.titleLarge),const SizedBox(height:16),
-      if(multi)for(final option in options) _ChoiceTile(label:option,selected:_selected==option,onTap:()=>setState(()=>_selected=option))
-      else TextField(controller:_text,minLines:3,maxLines:6,maxLength:2000,decoration:const InputDecoration(labelText:'Your answer',border:OutlineInputBorder())),
-      const SizedBox(height:12),FilledButton(onPressed:(){final value=multi?_selected:_text.text.trim();if(value!=null&&value.isNotEmpty)Navigator.pop(context,value);},child:const Text('Send Answer')),
-    ])));
+
+class _ComposeSheetState extends State<_ComposeSheet> {
+  final _question = TextEditingController();
+  final _options = List.generate(4, (_) => TextEditingController());
+  bool _multiple = false, _busy = false;
+  @override void dispose() { _question.dispose(); for (final c in _options) { c.dispose(); } super.dispose(); }
+
+  Future<void> _send() async {
+    final question = _question.text.trim();
+    final choices = _options.map((c) => c.text.trim()).where((v) => v.isNotEmpty).toList();
+    if (question.isEmpty || (_multiple && choices.length < 2)) return;
+    setState(() => _busy = true);
+    try {
+      await widget.service.create(
+        vaultId: widget.vaultId, recipientId: widget.partner['user_id'].toString(), question: question,
+        questionType: _multiple ? 'multiple_choice' : 'text', choices: _multiple ? choices : null,
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not send the question.')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final name = widget.partner['display_name']?.toString().trim();
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 18, 20, MediaQuery.viewInsetsOf(context).bottom + 20),
+      child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('Ask ${name == null || name.isEmpty ? 'your partner' : name}', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 6), const Text('Only the two of you can see this question.'), const SizedBox(height: 18),
+        TextField(controller: _question, maxLength: 1000, minLines: 2, maxLines: 5, decoration: const InputDecoration(labelText: 'Question', border: OutlineInputBorder())),
+        SegmentedButton<bool>(
+          segments: const [ButtonSegment(value: false, label: Text('Written')), ButtonSegment(value: true, label: Text('Choice'))],
+          selected: {_multiple}, onSelectionChanged: _busy ? null : (v) => setState(() => _multiple = v.first),
+        ),
+        if (_multiple) ...[
+          const SizedBox(height: 14),
+          for (var i = 0; i < _options.length; i++)
+            Padding(padding: const EdgeInsets.only(bottom: 8), child: TextField(
+              controller: _options[i], maxLength: 200,
+              decoration: InputDecoration(labelText: 'Option ${i + 1}', border: const OutlineInputBorder()),
+            )),
+        ],
+        const SizedBox(height: 12),
+        FilledButton.icon(onPressed: _busy ? null : _send, icon: const Icon(Icons.send_outlined), label: Text(_busy ? 'Sending…' : 'Send question')),
+      ])),
+    );
   }
 }
 
-class _ChoiceTile extends StatelessWidget{const _ChoiceTile({required this.label,required this.selected,required this.onTap});final String label;final bool selected;final VoidCallback onTap;@override Widget build(BuildContext context)=>Padding(padding:const EdgeInsets.only(bottom:8),child:InkWell(borderRadius:BorderRadius.circular(18),onTap:onTap,child:Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:selected?const Color(0xFFFFEDF1):Colors.white,border:Border.all(color:selected?const Color(0xFFE9365A):const Color(0xFFE9E4E5)),borderRadius:BorderRadius.circular(18)),child:Row(children:[Icon(selected?Icons.radio_button_checked:Icons.radio_button_off,color:selected?const Color(0xFFE9365A):const Color(0xFF8A8587)),const SizedBox(width:12),Expanded(child:Text(label))]))));}
+class _AnswerSheet extends StatefulWidget {
+  const _AnswerSheet({required this.item});
+  final Map<String, dynamic> item;
+  @override State<_AnswerSheet> createState() => _AnswerSheetState();
+}
+
+class _AnswerSheetState extends State<_AnswerSheet> {
+  final _text = TextEditingController();
+  String? _selected;
+  @override void dispose() { _text.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final multiple = widget.item['question_type'] == 'multiple_choice';
+    final options = (widget.item['choices'] as List?)?.map((e) => e.toString()).toList() ?? const <String>[];
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 18, 20, MediaQuery.viewInsetsOf(context).bottom + 20),
+      child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        const Text('Your answer'), const SizedBox(height: 8),
+        Text(widget.item['question']?.toString() ?? '', style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: 18),
+        if (multiple)
+          for (final option in options)
+            RadioListTile<String>(value: option, groupValue: _selected, onChanged: (v) => setState(() => _selected = v), title: Text(option), contentPadding: EdgeInsets.zero)
+        else
+          TextField(controller: _text, minLines: 3, maxLines: 7, maxLength: 2000, decoration: const InputDecoration(labelText: 'Write your answer', border: OutlineInputBorder())),
+        const SizedBox(height: 12),
+        FilledButton(onPressed: () {
+          final value = multiple ? _selected : _text.text.trim();
+          if (value != null && value.isNotEmpty) Navigator.pop(context, value);
+        }, child: const Text('Send answer')),
+      ])),
+    );
+  }
+}
