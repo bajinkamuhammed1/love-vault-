@@ -12,6 +12,7 @@ import '../profile/profile_screen.dart';
 import '../promises/promises_screen.dart';
 import '../anniversary/anniversary_screen.dart';
 import '../story/our_story_screen.dart';
+import '../saved/saved_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, required this.room});
@@ -112,6 +113,15 @@ class _HomeShellState extends State<HomeShell> {
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (_) => PromisesScreen(vaultId: id)));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.bookmark_outline),
+                title: const Text('Saved'),
+                subtitle: const Text('Keep the important pieces close'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => SavedScreen(vaultId: id)));
                 },
               ),
               const Divider(),
