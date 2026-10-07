@@ -27,7 +27,7 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
     body:FutureBuilder<List<Map<String,dynamic>>>(future:_future,builder:(context,s){
       if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
       if(s.hasError)return Center(child:FilledButton.icon(onPressed:_reload,icon:const Icon(Icons.refresh),label:const Text('Try again')));
-      final memories=s.data??const[];
+      final memories=s.data??<Map<String,dynamic>>[];
       final featured=memories.where((m)=>m['is_featured']==true).toList();
       final today=DateTime.now();
       final onThisDay=memories.where((m){final d=DateTime.tryParse(m['memory_date']?.toString()??'');return d!=null&&d.month==today.month&&d.day==today.day&&d.year!=today.year;}).toList();
