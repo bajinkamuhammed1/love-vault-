@@ -74,7 +74,7 @@ class _TimelineCard extends StatelessWidget{
       const SizedBox(height:5),Text(pretty(memory['memory_date']?.toString()??''),style:const TextStyle(fontWeight:FontWeight.w600,color:Color(0xFF9D2443))),
       if((memory['location_label']?.toString()??'').isNotEmpty)...[const SizedBox(height:5),Row(children:[const Icon(Icons.place_outlined,size:16),const SizedBox(width:4),Expanded(child:Text(memory['location_label'].toString(),style:Theme.of(context).textTheme.bodySmall))])],
       const SizedBox(height:12),Text(memory['body']?.toString()??'',style:Theme.of(context).textTheme.bodyLarge),
-    ]))),
+    ])))),
   ]));
 }
 
