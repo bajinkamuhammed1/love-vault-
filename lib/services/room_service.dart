@@ -3,38 +3,37 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class RoomService {
   RoomService(this._client);
   final SupabaseClient _client;
-
   String get userId => _client.auth.currentUser!.id;
 
-  Future<Map<String,dynamic>?> currentRoom() async {
-    final membership=await _client.from('vault_members').select('vault_id').eq('user_id',userId).maybeSingle();
-    if(membership==null)return null;
-    return roomSnapshot(membership['vault_id'].toString());
+  Future<Map<String, dynamic>?> currentRoom() async {
+    final m=await _client.from('vault_members').select('vault_id').eq('user_id',userId).maybeSingle();
+    if(m==null)return null;
+    return roomSnapshot(m['vault_id'].toString());
   }
 
   Future<Map<String,dynamic>> roomSnapshot(String vaultId) async {
-    final vault=Map<String,dynamic>.from(await _client.from('vault').select('id,name,relationship_start_date,created_at').eq('id',vaultId).single());
-    final members=await _client.from('vault_members').select('user_id,slot,display_name,joined_at').eq('vault_id',vaultId).order('slot');
-    return {
-      'id': vault['id'],
-      'room_code': '',
-      'is_locked': true,
-      'created_at': vault['created_at'],
-      'relationship_started_on': vault['relationship_start_date'],
-      'members': [for(final m in members) Map<String,dynamic>.from(m)],
-    };
+    final v=Map<String,dynamic>.from(await _client.from('vault').select('id,name,relationship_start_date,created_at,couple_title,anniversary_note').eq('id',vaultId).single());
+    final ms=await _client.from('vault_members').select('user_id,slot,display_name,avatar_emoji,nickname_for_partner,bio,joined_at').eq('vault_id',vaultId).order('slot');
+    return {'id':v['id'],'name':v['name'],'created_at':v['created_at'],'relationship_started_on':v['relationship_start_date'],'couple_title':v['couple_title'],'anniversary_note':v['anniversary_note'],'members':[for(final m in ms) Map<String,dynamic>.from(m)]};
   }
 
   Future<Map<String,dynamic>> myProfile() async {
-    return Map<String,dynamic>.from(await _client.from('vault_members').select('user_id,display_name,slot').eq('user_id',userId).single());
+    final m=Map<String,dynamic>.from(await _client.from('vault_members').select('vault_id,user_id,display_name,slot,avatar_emoji,nickname_for_partner,bio').eq('user_id',userId).single());
+    final v=Map<String,dynamic>.from(await _client.from('vault').select('couple_title,relationship_start_date,anniversary_note').eq('id',m['vault_id']).single());
+    return {...m,...v};
   }
 
-  Future<void> updateDisplayName(String name) async {
-    await _client.from('vault_members').update({'display_name':name.trim()}).eq('user_id',userId);
+  Future<void> updateProfile({required String displayName,String? avatarEmoji,String? nicknameForPartner,String? bio,String? coupleTitle,DateTime? relationshipStartDate,String? anniversaryNote}) async {
+    final m=await _client.from('vault_members').select('vault_id').eq('user_id',userId).single();
+    final vaultId=m['vault_id'].toString();
+    await _client.from('vault_members').update({'display_name':displayName.trim(),'avatar_emoji':_nullable(avatarEmoji),'nickname_for_partner':_nullable(nicknameForPartner),'bio':_nullable(bio)}).eq('user_id',userId);
+    await _client.from('vault').update({'couple_title':_nullable(coupleTitle),'relationship_start_date':relationshipStartDate==null?null:relationshipStartDate.toIso8601String().split('T').first,'anniversary_note':_nullable(anniversaryNote)}).eq('id',vaultId);
   }
+
+  String? _nullable(String? value){final v=value?.trim()??'';return v.isEmpty?null:v;}
 
   Future<Map<String,dynamic>> joinVault(String displayName) async {
-    final vaultId=await _client.rpc('join_love_vault',params:{'p_display_name':displayName.trim()});
-    return roomSnapshot(vaultId.toString());
+    final id=await _client.rpc('join_love_vault',params:{'p_display_name':displayName.trim()});
+    return roomSnapshot(id.toString());
   }
 }

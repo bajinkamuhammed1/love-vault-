@@ -1,181 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../../services/room_service.dart';
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
-
-  @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
-}
-
-class _ProfileScreenState extends State<ProfileScreen> {
-  late final RoomService _rooms;
-  final _name = TextEditingController();
-
-  bool _loading = true;
-  bool _saving = false;
-  String? _loadError;
-
-  @override
-  void initState() {
-    super.initState();
-    _rooms = RoomService(Supabase.instance.client);
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _loadError = null;
-    });
-    try {
-      final profile = await _rooms.myProfile();
-      if (!mounted) return;
-      _name.text = profile['display_name']?.toString() ?? '';
-    } catch (_) {
-      if (!mounted) return;
-      _loadError = 'We couldn’t load your profile. Check your connection and try again.';
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _save() async {
-    final displayName = _name.text.trim();
-    if (displayName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a display name before saving.')),
-      );
-      return;
-    }
-
-    setState(() => _saving = true);
-    try {
-      await _rooms.updateDisplayName(displayName);
-      if (!mounted) return;
-      _name.text = displayName;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name updated')),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('We couldn’t update your name. Please try again.'),
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    _name.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Your Profile'),
-          backgroundColor: Colors.white,
-          scrolledUnderElevation: 0,
-        ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _loadError != null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.cloud_off_outlined,
-                            size: 42,
-                            color: Color(0xFFE9365A),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _loadError!,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          FilledButton.icon(
-                            onPressed: _load,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Try again'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : ListView(
-                    padding: const EdgeInsets.all(24),
-                    children: [
-                      const Center(
-                        child: CircleAvatar(
-                          radius: 48,
-                          backgroundColor: Color(0xFFFFEDF1),
-                          child: Icon(
-                            Icons.favorite_outline,
-                            size: 46,
-                            color: Color(0xFFE9365A),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        'Your side of the vault',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'This is the name your partner sees.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 28),
-                      TextField(
-                        controller: _name,
-                        maxLength: 50,
-                        decoration: const InputDecoration(
-                          labelText: 'Display name',
-                          prefixIcon: Icon(Icons.person_outline),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton.icon(
-                        onPressed: _saving ? null : _save,
-                        icon: const Icon(Icons.check),
-                        label: Text(_saving ? 'Saving…' : 'Save changes'),
-                      ),
-                      const SizedBox(height: 24),
-                      const Card(
-                        child: Padding(
-                          padding: EdgeInsets.all(18),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.lock_outline,
-                                color: Color(0xFFE9365A),
-                              ),
-                              SizedBox(width: 14),
-                              Expanded(
-                                child: Text(
-                                  'Your profile belongs to this private two-person Love Vault.',
-                                  style: TextStyle(fontFamily: 'sans-serif'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-      );
+class ProfileScreen extends StatefulWidget{const ProfileScreen({super.key});@override State<ProfileScreen> createState()=>_ProfileScreenState();}
+class _ProfileScreenState extends State<ProfileScreen>{
+ late final RoomService _rooms; final _name=TextEditingController(),_partner=TextEditingController(),_bio=TextEditingController(),_title=TextEditingController(),_note=TextEditingController();
+ final _avatars=const ['♥','🌹','✨','🌙','🦋','🌷']; String _avatar='♥'; DateTime? _date; bool _loading=true,_saving=false; String? _error;
+ @override void initState(){super.initState();_rooms=RoomService(Supabase.instance.client);_load();}
+ Future<void> _load() async{setState((){_loading=true;_error=null;});try{final p=await _rooms.myProfile();if(!mounted)return;_name.text=p['display_name']?.toString()??'';_partner.text=p['nickname_for_partner']?.toString()??'';_bio.text=p['bio']?.toString()??'';_title.text=p['couple_title']?.toString()??'';_note.text=p['anniversary_note']?.toString()??'';final a=p['avatar_emoji']?.toString();_avatar=a!=null&&_avatars.contains(a)?a:'♥';_date=DateTime.tryParse(p['relationship_start_date']?.toString()??'');}catch(_){if(mounted)_error='We couldn’t load your profile.';}finally{if(mounted)setState(()=>_loading=false);}}
+ Future<void> _pickDate() async{final now=DateTime.now();final d=await showDatePicker(context:context,initialDate:_date??now,firstDate:DateTime(1900),lastDate:now,helpText:'Relationship start date');if(d!=null)setState(()=>_date=d);}
+ Future<void> _save() async{final n=_name.text.trim();if(n.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Add your name first.')));return;}setState(()=>_saving=true);try{await _rooms.updateProfile(displayName:n,avatarEmoji:_avatar,nicknameForPartner:_partner.text,bio:_bio.text,coupleTitle:_title.text,relationshipStartDate:_date,anniversaryNote:_note.text);if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profile saved')));}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Couldn’t save your profile. Try again.')));}finally{if(mounted)setState(()=>_saving=false);}}
+ @override void dispose(){_name.dispose();_partner.dispose();_bio.dispose();_title.dispose();_note.dispose();super.dispose();}
+ @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Our profile')),body:_loading?const Center(child:CircularProgressIndicator()):_error!=null?Center(child:FilledButton.icon(onPressed:_load,icon:const Icon(Icons.refresh),label:const Text('Try again'))):ListView(padding:const EdgeInsets.fromLTRB(20,12,20,40),children:[
+  Text('Make it yours',style:Theme.of(context).textTheme.headlineMedium),const SizedBox(height:6),Text('Your identity and the details you share together.',style:Theme.of(context).textTheme.bodyLarge),const SizedBox(height:24),
+  Text('Your profile',style:Theme.of(context).textTheme.titleLarge),const SizedBox(height:12),Center(child:CircleAvatar(radius:44,child:Text(_avatar,style:const TextStyle(fontSize:34)))),const SizedBox(height:12),Wrap(alignment:WrapAlignment.center,spacing:8,children:[for(final a in _avatars)ChoiceChip(label:Text(a),selected:_avatar==a,onSelected:(_)=>setState(()=>_avatar=a))]),const SizedBox(height:20),
+  TextField(controller:_name,maxLength:50,decoration:const InputDecoration(labelText:'Your display name')),const SizedBox(height:12),TextField(controller:_bio,maxLength:160,maxLines:3,decoration:const InputDecoration(labelText:'A little about you')),const SizedBox(height:28),
+  Text('The two of you',style:Theme.of(context).textTheme.titleLarge),const SizedBox(height:12),TextField(controller:_partner,maxLength:50,decoration:const InputDecoration(labelText:'What you call your partner')),const SizedBox(height:12),TextField(controller:_title,maxLength:60,decoration:const InputDecoration(labelText:'Couple title',hintText:'Our little world')),const SizedBox(height:12),
+  InkWell(borderRadius:BorderRadius.circular(22),onTap:_pickDate,child:InputDecorator(decoration:const InputDecoration(labelText:'Our anniversary'),child:Text(_date==null?'Choose your date':'${_date!.day}/${_date!.month}/${_date!.year}'))),const SizedBox(height:12),TextField(controller:_note,maxLength:180,maxLines:3,decoration:const InputDecoration(labelText:'Anniversary note')),const SizedBox(height:24),FilledButton.icon(onPressed:_saving?null:_save,icon:const Icon(Icons.favorite_outline),label:Text(_saving?'Saving…':'Save profile'))
+ ]));
 }
