@@ -10,6 +10,7 @@ import '../surprise/surprise_screen.dart';
 import '../memories/memories_screen.dart';
 import '../profile/profile_screen.dart';
 import '../promises/promises_screen.dart';
+import '../anniversary/anniversary_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, required this.room});
@@ -83,6 +84,15 @@ class _HomeShellState extends State<HomeShell> {
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionBankScreen()));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.calendar_month_outlined),
+                title: const Text('Anniversary'),
+                subtitle: const Text('Your date and countdown'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => AnniversaryScreen(vaultId: id)));
                 },
               ),
               ListTile(
