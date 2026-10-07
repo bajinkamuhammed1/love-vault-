@@ -14,6 +14,11 @@ class PlayService {
     return rows.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
+  Future<Map<String, dynamic>> overallScores(String vaultId) async {
+    final value = await _client.rpc('get_play_overall_scores', params: {'p_vault_id': vaultId});
+    return Map<String, dynamic>.from(value as Map);
+  }
+
   Future<String> startGame(String vaultId, String categoryId) async {
     final id = await _client.rpc('start_play_game', params: {'p_vault_id': vaultId, 'p_category_id': categoryId});
     return id.toString();

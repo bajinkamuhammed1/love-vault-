@@ -18,6 +18,7 @@ class _PlayScreenState extends State<PlayScreen> {
   List<Map<String, dynamic>> _categories = [];
   List<Map<String, dynamic>> _games = [];
   Map<String, dynamic>? _game;
+  Map<String, dynamic> _scores = const {'my_score': 0, 'partner_score': 0, 'completed_games': 0};
   int _index = 0;
   bool _busy = false;
   String? _error;
@@ -39,11 +40,12 @@ class _PlayScreenState extends State<PlayScreen> {
 
   Future<void> _loadLobby() async {
     try {
-      final values = await Future.wait([_play.categories(), _play.games(widget.roomId)]);
+      final values = await Future.wait([_play.categories(), _play.games(widget.roomId), _play.overallScores(widget.roomId)]);
       if (!mounted) return;
       setState(() {
         _categories = values[0];
         _games = values[1];
+        _scores = Map<String, dynamic>.from(values[2]);
         _error = null;
       });
     } catch (_) {
@@ -364,6 +366,30 @@ class _PlayScreenState extends State<PlayScreen> {
             child: Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ),
         const SizedBox(height: 30),
+        Text('Overall score', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(color: const Color(0xFFFFF4F6), borderRadius: BorderRadius.circular(24)),
+          child: Row(children: [
+            Expanded(child: Column(children: [
+              Text(_scores['my_name']?.toString() ?? 'You', maxLines: 1, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 5),
+              Text('${_scores['my_score'] ?? 0}', style: Theme.of(context).textTheme.headlineMedium),
+              const Text('points'),
+            ])),
+            Container(width: 1, height: 58, color: const Color(0xFFE8DADD)),
+            Expanded(child: Column(children: [
+              Text(_scores['partner_name']?.toString() ?? 'Partner', maxLines: 1, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 5),
+              Text('${_scores['partner_score'] ?? 0}', style: Theme.of(context).textTheme.headlineMedium),
+              const Text('points'),
+            ])),
+          ]),
+        ),
+        const SizedBox(height: 8),
+        Text('${_scores['completed_games'] ?? 0} completed games', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 26),
         Row(children: [
           Text('Our games', style: Theme.of(context).textTheme.titleLarge),
           const Spacer(),
