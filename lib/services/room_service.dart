@@ -1,39 +1,12 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class RoomService {
-  RoomService(this._client);
-  final SupabaseClient _client;
-  String get userId => _client.auth.currentUser!.id;
-
-  Future<Map<String, dynamic>?> currentRoom() async {
-    final m=await _client.from('vault_members').select('vault_id').eq('user_id',userId).maybeSingle();
-    if(m==null)return null;
-    return roomSnapshot(m['vault_id'].toString());
-  }
-
-  Future<Map<String,dynamic>> roomSnapshot(String vaultId) async {
-    final v=Map<String,dynamic>.from(await _client.from('vault').select('id,name,relationship_start_date,created_at,couple_title,anniversary_note').eq('id',vaultId).single());
-    final ms=await _client.from('vault_members').select('user_id,slot,display_name,avatar_emoji,nickname_for_partner,bio,joined_at').eq('vault_id',vaultId).order('slot');
-    return {'id':v['id'],'name':v['name'],'created_at':v['created_at'],'relationship_started_on':v['relationship_start_date'],'couple_title':v['couple_title'],'anniversary_note':v['anniversary_note'],'members':[for(final m in ms) Map<String,dynamic>.from(m)]};
-  }
-
-  Future<Map<String,dynamic>> myProfile() async {
-    final m=Map<String,dynamic>.from(await _client.from('vault_members').select('vault_id,user_id,display_name,slot,avatar_emoji,nickname_for_partner,bio').eq('user_id',userId).single());
-    final v=Map<String,dynamic>.from(await _client.from('vault').select('couple_title,relationship_start_date,anniversary_note').eq('id',m['vault_id']).single());
-    return {...m,...v};
-  }
-
-  Future<void> updateProfile({required String displayName,String? avatarEmoji,String? nicknameForPartner,String? bio,String? coupleTitle,DateTime? relationshipStartDate,String? anniversaryNote}) async {
-    final m=await _client.from('vault_members').select('vault_id').eq('user_id',userId).single();
-    final vaultId=m['vault_id'].toString();
-    await _client.from('vault_members').update({'display_name':displayName.trim(),'avatar_emoji':_nullable(avatarEmoji),'nickname_for_partner':_nullable(nicknameForPartner),'bio':_nullable(bio)}).eq('user_id',userId);
-    await _client.from('vault').update({'couple_title':_nullable(coupleTitle),'relationship_start_date':relationshipStartDate==null?null:relationshipStartDate.toIso8601String().split('T').first,'anniversary_note':_nullable(anniversaryNote)}).eq('id',vaultId);
-  }
-
-  String? _nullable(String? value){final v=value?.trim()??'';return v.isEmpty?null:v;}
-
-  Future<Map<String,dynamic>> joinVault(String displayName) async {
-    final id=await _client.rpc('join_love_vault',params:{'p_display_name':displayName.trim()});
-    return roomSnapshot(id.toString());
-  }
+class RoomService{RoomService(this._client);final SupabaseClient _client;String get userId=>_client.auth.currentUser!.id;
+ Future<Map<String,dynamic>?> currentRoom() async{final m=await _client.from('vault_members').select('vault_id').eq('user_id',userId).maybeSingle();if(m==null)return null;return roomSnapshot(m['vault_id'].toString());}
+ Future<Map<String,dynamic>> roomSnapshot(String vaultId) async{final v=Map<String,dynamic>.from(await _client.from('vault').select('id,name,relationship_start_date,created_at,couple_title,anniversary_note').eq('id',vaultId).single());final ms=await _client.from('vault_members').select('user_id,slot,display_name,avatar_emoji,nickname_for_partner,bio,joined_at').eq('vault_id',vaultId).order('slot');return{'id':v['id'],'name':v['name'],'created_at':v['created_at'],'relationship_started_on':v['relationship_start_date'],'couple_title':v['couple_title'],'anniversary_note':v['anniversary_note'],'members':[for(final m in ms)Map<String,dynamic>.from(m)]};}
+ Future<Map<String,dynamic>> myProfile() async{final m=Map<String,dynamic>.from(await _client.from('vault_members').select('vault_id,user_id,display_name,slot,avatar_emoji,nickname_for_partner,bio').eq('user_id',userId).single());final v=Map<String,dynamic>.from(await _client.from('vault').select('couple_title,relationship_start_date,anniversary_note').eq('id',m['vault_id']).single());return{...m,...v};}
+ Future<void> updateProfile({required String displayName,String? avatarEmoji,String? nicknameForPartner,String? bio,String? coupleTitle,DateTime? relationshipStartDate,String? anniversaryNote}) async{final m=await _client.from('vault_members').select('vault_id').eq('user_id',userId).single();final id=m['vault_id'].toString();await _client.from('vault_members').update({'display_name':displayName.trim(),'avatar_emoji':_nullable(avatarEmoji),'nickname_for_partner':_nullable(nicknameForPartner),'bio':_nullable(bio)}).eq('user_id',userId);await _client.from('vault').update({'couple_title':_nullable(coupleTitle),'relationship_start_date':relationshipStartDate==null?null:relationshipStartDate.toIso8601String().split('T').first,'anniversary_note':_nullable(anniversaryNote)}).eq('id',id);}
+ String? _nullable(String? v){final x=v?.trim()??'';return x.isEmpty?null:x;}
+ Future<String> generatePairingCode(int targetSlot) async{final x=await _client.rpc('generate_pairing_code',params:{'p_target_slot':targetSlot});return x.toString();}
+ Future<Map<String,dynamic>> redeemPairingCode(String code,String displayName) async{final id=await _client.rpc('redeem_pairing_code',params:{'p_code':code.trim(),'p_display_name':displayName.trim()});return roomSnapshot(id.toString());}
+ Future<Map<String,dynamic>> joinVault(String displayName) async{final id=await _client.rpc('join_love_vault',params:{'p_display_name':displayName.trim()});return roomSnapshot(id.toString());}
 }

@@ -1,27 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../services/room_service.dart';
+import '../profile/profile_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key, required this.roomId});
-  final String roomId;
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Settings')),
-    body: ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(color: const Color(0xFFFFF1F4), borderRadius: BorderRadius.circular(28)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('💕', style: TextStyle(fontSize: 34)),
-            const SizedBox(height: 8),
-            Text('Love Vault', style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 6),
-            const Text('Shared settings for your private space. Question Bank now has its own shortcut in the menu.'),
-          ]),
-        ),
-      ],
-    ),
-  );
-}
+class SettingsScreen extends StatefulWidget{const SettingsScreen({super.key,required this.roomId});final String roomId;@override State<SettingsScreen> createState()=>_SettingsScreenState();}
+class _SettingsScreenState extends State<SettingsScreen>{late final RoomService _rooms;bool _busy=false;String? _code;
+ @override void initState(){super.initState();_rooms=RoomService(Supabase.instance.client);}
+ Future<void> _generate() async{setState(()=>_busy=true);try{final r=await _rooms.roomSnapshot(widget.roomId);final members=(r['members'] as List?)??const[];final used={for(final m in members) m['slot'] as int};final slot=used.contains(1)?2:1;if(used.contains(slot)){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Both people are already connected.')));return;}final c=await _rooms.generatePairingCode(slot);if(mounted)setState(()=>_code=c);}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Could not create a pairing code.')));}finally{if(mounted)setState(()=>_busy=false);}}
+ Future<void> _signOut() async{final yes=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Sign out?'),content:const Text('Your profile stays in Love Vault.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Sign out'))]));if(yes==true)await Supabase.instance.client.auth.signOut();}
+ @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Settings')),body:ListView(padding:const EdgeInsets.fromLTRB(20,12,20,40),children:[Text('Love Vault settings',style:Theme.of(context).textTheme.headlineMedium),const SizedBox(height:6),const Text('Manage your profile, connection and privacy. No account email is shown here.'),const SizedBox(height:24),_Section(title:'Profile & relationship',children:[ListTile(leading:const Icon(Icons.person_outline),title:const Text('Profile and anniversary'),subtitle:const Text('Name, avatar, partner nickname, couple title and date'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ProfileScreen())))]),const SizedBox(height:18),_Section(title:'Connection',children:[const ListTile(leading:Icon(Icons.link),title:Text('Connected'),subtitle:Text('This device is connected to your Love Vault profile.')),ListTile(leading:const Icon(Icons.key_outlined),title:const Text('Create partner pairing code'),subtitle:const Text('One-time code • expires after 30 minutes'),onTap:_busy?null:_generate),if(_code!=null)ListTile(title:SelectableText(_code!,style:Theme.of(context).textTheme.titleLarge),subtitle:const Text('Share this privately. It works once and then becomes invalid.'),trailing:IconButton(icon:const Icon(Icons.copy),onPressed:(){Clipboard.setData(ClipboardData(text:_code!));ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Code copied')));}))]),const SizedBox(height:18),_Section(title:'Privacy',children:const[ListTile(leading:Icon(Icons.lock_outline),title:Text('Private space for two'),subtitle:Text('Only the two connected profiles belong in Love Vault.')),ListTile(leading:Icon(Icons.visibility_outlined),title:Text('Private surprise drafts'),subtitle:Text('Drafts remain private until their creator shares them.'))]),const SizedBox(height:18),_Section(title:'Account',children:[ListTile(leading:const Icon(Icons.logout),title:const Text('Sign out'),subtitle:const Text('Sign out on this device'),onTap:_signOut)]),const SizedBox(height:18),_Section(title:'About',children:const[ListTile(leading:Icon(Icons.favorite_outline),title:Text('Love Vault'),subtitle:Text('One private shared space for two people.'))]) ]));}
+class _Section extends StatelessWidget{const _Section({required this.title,required this.children});final String title;final List<Widget> children;@override Widget build(BuildContext context)=>Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:Theme.of(context).textTheme.titleLarge),const SizedBox(height:8),Card(child:Column(children:children))]);}
