@@ -9,6 +9,7 @@ import '../ask_me/ask_me_screen.dart';
 import '../surprise/surprise_screen.dart';
 import '../memories/memories_screen.dart';
 import '../profile/profile_screen.dart';
+import '../promises/promises_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, required this.room});
@@ -82,6 +83,15 @@ class _HomeShellState extends State<HomeShell> {
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionBankScreen()));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.volunteer_activism_outlined),
+                title: const Text('Our Promises'),
+                subtitle: const Text('The words you choose together'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => PromisesScreen(vaultId: id)));
                 },
               ),
               const Divider(),
