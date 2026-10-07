@@ -40,12 +40,14 @@ class _PlayScreenState extends State<PlayScreen> {
 
   Future<void> _loadLobby() async {
     try {
-      final values = await Future.wait([_play.categories(), _play.games(widget.roomId), _play.overallScores(widget.roomId)]);
+      final categories = await _play.categories();
+      final games = await _play.games(widget.roomId);
+      final scores = await _play.overallScores(widget.roomId);
       if (!mounted) return;
       setState(() {
-        _categories = values[0];
-        _games = values[1];
-        _scores = Map<String, dynamic>.from(values[2]);
+        _categories = categories;
+        _games = games;
+        _scores = scores;
         _error = null;
       });
     } catch (_) {
