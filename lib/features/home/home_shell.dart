@@ -11,6 +11,7 @@ import '../memories/memories_screen.dart';
 import '../profile/profile_screen.dart';
 import '../promises/promises_screen.dart';
 import '../anniversary/anniversary_screen.dart';
+import '../story/our_story_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, required this.room});
@@ -93,6 +94,15 @@ class _HomeShellState extends State<HomeShell> {
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (_) => AnniversaryScreen(vaultId: id)));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.auto_stories_outlined),
+                title: const Text('Our Story'),
+                subtitle: const Text('The story you write together'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => OurStoryScreen(vaultId: id)));
                 },
               ),
               ListTile(
