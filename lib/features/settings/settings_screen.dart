@@ -6,7 +6,8 @@ import '../profile/profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget{const SettingsScreen({super.key,required this.roomId});final String roomId;@override State<SettingsScreen> createState()=>_SettingsScreenState();}
 class _SettingsScreenState extends State<SettingsScreen>{late final RoomService _rooms;bool _busy=false;String? _code;bool _owner=false;bool _partnerConnected=false;
- @override void initState(){super.initState();_rooms=RoomService(Supabase.instance.client);_loadConnection();}\n Future<void> _loadConnection() async{try{final r=await _rooms.roomSnapshot(widget.roomId);final members=(r['members'] as List?)??const[];final uid=Supabase.instance.client.auth.currentUser?.id;final me=members.where((m)=>m['user_id']==uid).toList();if(mounted)setState((){_owner=me.isNotEmpty&&me.first['slot']==1;_partnerConnected=members.any((m)=>m['slot']==2);});}catch(_){}}
+ @override void initState(){super.initState();_rooms=RoomService(Supabase.instance.client);_loadConnection();}
+ Future<void> _loadConnection() async{try{final r=await _rooms.roomSnapshot(widget.roomId);final members=(r['members'] as List?)??const[];final uid=Supabase.instance.client.auth.currentUser?.id;final me=members.where((m)=>m['user_id']==uid).toList();if(mounted)setState((){_owner=me.isNotEmpty&&me.first['slot']==1;_partnerConnected=members.any((m)=>m['slot']==2);});}catch(_){}}
  Future<void> _generate() async{
   if(!_owner)return;
   if(_partnerConnected){
