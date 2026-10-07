@@ -73,7 +73,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Center(child:CircleAvatar(radius:34,backgroundColor:Color(0xFFE9365A),child:Icon(Icons.lock_heart_outlined,color:Colors.white,size:32))),
+                  const Center(child:CircleAvatar(radius:34,backgroundColor:Color(0xFFE9365A),child:Icon(Icons.lock_outline,color:Colors.white,size:32))),
                   const SizedBox(height: 20),
                   Text(
                     'Private Love Vault',
