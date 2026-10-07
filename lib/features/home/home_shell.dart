@@ -13,6 +13,7 @@ import '../promises/promises_screen.dart';
 import '../anniversary/anniversary_screen.dart';
 import '../story/our_story_screen.dart';
 import '../saved/saved_screen.dart';
+import '../activity/vault_activity_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, required this.room});
@@ -122,6 +123,15 @@ class _HomeShellState extends State<HomeShell> {
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (_) => SavedScreen(vaultId: id)));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.history_rounded),
+                title: const Text('Vault Activity'),
+                subtitle: const Text('Your shared history'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => VaultActivityScreen(vaultId: id)));
                 },
               ),
               const Divider(),
