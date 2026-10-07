@@ -29,8 +29,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _join() async {
-    if (_name.text.trim().isEmpty || _code.text.trim().isEmpty) {
-      setState(() => _error = 'Enter your name and the pairing code.');
+    if (_code.text.trim().isEmpty) {
+      setState(() => _error = 'Enter the pairing or recovery code.');
       return;
     }
 
@@ -42,7 +42,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     try {
       await widget.roomService.redeemPairingCode(
         _code.text,
-        _name.text,
+        _name.text.trim().isEmpty ? 'Partner' : _name.text,
       );
       widget.onConnected();
     } catch (e) {
@@ -50,7 +50,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final message = e.toString().toLowerCase();
       setState(() {
         _error = message.contains('expired')
-            ? 'That code is invalid or expired. Ask for a new one.'
+            ? 'That code is invalid or expired. Ask the Owner for a new one.'
             : 'Could not connect. Check the code and try again.';
       });
     } finally {
@@ -86,7 +86,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Enter the one-time pairing code created by the Love Vault owner.',
+                    'Enter the one-time code created by the Love Vault owner. It can connect you for the first time or recover the same Partner profile on a new sign-in.',
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 28),
@@ -94,7 +94,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     controller: _name,
                     maxLength: 50,
                     decoration: const InputDecoration(
-                      labelText: 'Your display name',
+                      labelText: 'Your display name (first connection only)',
                       prefixIcon: Icon(Icons.person_outline),
                     ),
                   ),
@@ -104,7 +104,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     autocorrect: false,
                     textCapitalization: TextCapitalization.characters,
                     decoration: const InputDecoration(
-                      labelText: 'Pairing code',
+                      labelText: 'Pairing or recovery code',
                       prefixIcon: Icon(Icons.key_outlined),
                     ),
                   ),

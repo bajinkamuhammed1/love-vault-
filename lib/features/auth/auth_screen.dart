@@ -26,7 +26,7 @@ class _AuthScreenState extends State<AuthScreen> {
     final email = _email.text.trim();
     final password = _password.text;
     if (email.isEmpty || password.length < 6) {
-      setState(() => _message = 'Enter your approved email and a password of at least 6 characters.');
+      setState(() => _message = 'Enter your email and a password of at least 6 characters.');
       return;
     }
     setState(() { _busy = true; _message = null; });
@@ -65,7 +65,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 const SizedBox(height: 20),
                 Text('Love Vault', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineLarge),
                 const SizedBox(height: 8),
-                Text('Private access for the two approved accounts.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyLarge),
+                Text('Sign in to your Love Vault account.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyLarge),
                 const SizedBox(height: 28),
                 TextField(controller: _email, keyboardType: TextInputType.emailAddress, autofillHints: const [AutofillHints.email], decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined))),
                 const SizedBox(height: 12),
@@ -76,7 +76,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 const SizedBox(height: 10),
                 TextButton(onPressed: _busy ? null : () => setState(() { _signUp = !_signUp; _message = null; }), child: Text(_signUp ? 'Already registered? Sign in' : 'First time here? Create account')),
                 const SizedBox(height: 8),
-                const Text('Only the two approved, confirmed email addresses can enter the vault.', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'sans-serif', color: Color(0xFF777174))),
+                const Text('Signing in does not grant Love Vault access by itself. A new Partner must also use the Owner’s one-time code.', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'sans-serif', color: Color(0xFF777174))),
               ],
             ),
           ),
